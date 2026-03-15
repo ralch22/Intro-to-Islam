@@ -65,7 +65,7 @@ function cohortColor(cohort: string) {
   }
 }
 
-function MeetingCard({ meeting }: { meeting: ZoomMeeting }) {
+function MeetingCard({ meeting, liveParticipants }: { meeting: ZoomMeeting; liveParticipants?: number }) {
   const [countdown, setCountdown] = useState(() => getCountdown(meeting.start_time));
 
   useEffect(() => {
@@ -74,6 +74,8 @@ function MeetingCard({ meeting }: { meeting: ZoomMeeting }) {
     }, 30000);
     return () => clearInterval(interval);
   }, [meeting.start_time]);
+
+  const participantCount = liveParticipants ?? meeting.participants;
 
   const day = new Date(meeting.start_time).toLocaleDateString("en-AU", { day: "numeric" });
   const month = new Date(meeting.start_time).toLocaleDateString("en-AU", { month: "short" }).toUpperCase();
@@ -112,7 +114,7 @@ function MeetingCard({ meeting }: { meeting: ZoomMeeting }) {
           <div className="flex flex-wrap items-center text-sm text-gray-600 gap-4 mb-2">
             <span>🕐 {formatTime(meeting.start_time)}</span>
             <span>⏱ {meeting.duration} min</span>
-            <span>👥 {meeting.participants} enrolled</span>
+            <span>👥 {participantCount} enrolled</span>
           </div>
           <p className="text-sm text-gray-500">{formatDate(meeting.start_time)}</p>
         </div>
@@ -178,19 +180,48 @@ export default function SchedulePage() {
   const [meetings, setMeetings] = useState<ZoomMeeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetch("/api/schedule")
       .then((r) => r.json())
       .then((data) => {
-        setMeetings(Array.isArray(data) ? data : []);
+        const loaded: ZoomMeeting[] = Array.isArray(data) ? data : [];
+        setMeetings(loaded);
         setLoading(false);
+        return loaded;
       })
       .catch(() => {
         setError("Failed to load schedule.");
         setLoading(false);
+        return [] as ZoomMeeting[];
       });
   }, []);
+
+  // Poll participant counts every 60 seconds
+  useEffect(() => {
+    if (meetings.length === 0) return;
+
+    async function fetchCounts() {
+      const entries = await Promise.all(
+        meetings.map(async (m) => {
+          try {
+            const res = await fetch(`/api/schedule/${m.id}/participants`);
+            if (!res.ok) return [m.id, m.participants] as [string, number];
+            const d = (await res.json()) as { count?: number; participants?: number };
+            return [m.id, d.count ?? d.participants ?? m.participants] as [string, number];
+          } catch {
+            return [m.id, m.participants] as [string, number];
+          }
+        })
+      );
+      setParticipantCounts(Object.fromEntries(entries));
+    }
+
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
+    return () => clearInterval(interval);
+  }, [meetings]);
 
   return (
     <main className="flex-grow flex flex-col bg-gradient-to-b from-gray-50 to-[#F3F4F6]">
@@ -252,7 +283,11 @@ export default function SchedulePage() {
                   </div>
                 ) : (
                   meetings.map((meeting) => (
-                    <MeetingCard key={meeting.id} meeting={meeting} />
+                    <MeetingCard
+                      key={meeting.id}
+                      meeting={meeting}
+                      liveParticipants={participantCounts[meeting.id]}
+                    />
                   ))
                 )}
               </div>

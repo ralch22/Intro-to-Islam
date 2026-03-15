@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { YouTubePlayer } from "./YouTubePlayer";
+import { CompletionScreen } from "@/components/course/CompletionScreen";
 
 type Lesson = {
   id: string;
@@ -43,6 +44,7 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
   const [completed, setCompleted] = useState(lesson.completed);
   const [marking, setMarking] = useState(false);
   const [activeTab, setActiveTab] = useState<"notes" | "discussion" | "about">("notes");
+  const [showCompletion, setShowCompletion] = useState(false);
 
   // Notes tab state
   const [notesText, setNotesText] = useState<string | null>(null);
@@ -127,6 +129,12 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
       setCompleted(true);
     } finally {
       setMarking(false);
+      // Check if this is the last lesson in the course
+      const sorted = [...allLessons].sort((a, b) => a.order - b.order);
+      const maxOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : 0;
+      if (lesson.order === maxOrder) {
+        setShowCompletion(true);
+      }
     }
   }
 
@@ -159,7 +167,18 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
     { id: "about" as const, label: "About" },
   ];
 
+  const courseTitleFromLessons =
+    allLessons.length > 0 ? `Course ${courseId}` : "Course";
+
   return (
+    <>
+      {showCompletion && (
+        <CompletionScreen
+          courseTitle={courseTitleFromLessons}
+          courseId={courseId}
+          onClose={() => setShowCompletion(false)}
+        />
+      )}
     <main className="flex-grow flex flex-col bg-gradient-to-b from-gray-50 to-[#F3F4F6]">
       <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
@@ -417,5 +436,6 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
         </div>
       </div>
     </main>
+    </>
   );
 }

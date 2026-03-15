@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { DonationNudge } from "@/components/dashboard/DonationNudge";
 
 type Course = {
   id: number;
@@ -349,6 +350,9 @@ export default function DashboardPage() {
 
           {/* Sidebar */}
           <div className="space-y-6 md:space-y-8">
+
+            {/* Donation nudge (dismissible) */}
+            <DonationNudge />
 
             {/* Donation card */}
             <section className="rounded-2xl p-[2px]" style={{ background: "linear-gradient(135deg, #1E40AF 0%, #6B21A8 100%)" }}>

@@ -1,6 +1,32 @@
+"use client";
+import { useState } from "react";
 import Link from "next/link";
 
-const posts = [
+type Post = {
+  id: string;
+  pinned?: boolean;
+  tag: string;
+  tagStyle: string;
+  title: string;
+  body: string;
+  ago: string;
+  author: {
+    name: string;
+    role: string;
+    initials: string | null;
+    isInstructor: boolean;
+  };
+  likes: number;
+  comments: number;
+  borderLeft?: boolean;
+  reply?: {
+    author: string;
+    initials: string;
+    text: string;
+  };
+};
+
+const initialPosts: Post[] = [
   {
     id: "p1",
     pinned: true,
@@ -33,6 +59,47 @@ const posts = [
 ];
 
 export default function CommunityPage() {
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [composeText, setComposeText] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  async function handlePost() {
+    if (!composeText.trim() || posting) return;
+    setPosting(true);
+    const text = composeText.trim();
+
+    try {
+      await fetch("/api/lessons/mock-lesson/discussion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text }),
+      });
+    } catch {
+      // ignore — add locally regardless
+    }
+
+    const newPost: Post = {
+      id: `local-${Date.now()}`,
+      tag: "Discussion",
+      tagStyle: "bg-pink-100 text-[#E81C74]",
+      title: text.length > 80 ? text.slice(0, 80) + "..." : text,
+      body: text,
+      ago: "Just now",
+      author: {
+        name: "You",
+        role: "Student",
+        initials: null,
+        isInstructor: false,
+      },
+      likes: 0,
+      comments: 0,
+    };
+
+    setPosts((prev) => [newPost, ...prev]);
+    setComposeText("");
+    setPosting(false);
+  }
+
   return (
     <main className="flex-grow flex flex-col bg-gradient-to-b from-gray-50 to-[#F3F4F6]">
       <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 w-full">
@@ -46,7 +113,12 @@ export default function CommunityPage() {
               Connect, discuss, and learn together with fellow students and instructors.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button className="w-full sm:w-auto bg-white text-[#1E40AF] font-semibold py-3 px-8 rounded-full hover:bg-gray-50 transition-colors shadow-sm">
+              <button
+                onClick={() => {
+                  document.getElementById("compose-box")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="w-full sm:w-auto bg-white text-[#1E40AF] font-semibold py-3 px-8 rounded-full hover:bg-gray-50 transition-colors shadow-sm"
+              >
                 ✏️ New Post
               </button>
               <button className="w-full sm:w-auto bg-white/20 text-white border border-white/30 font-medium py-3 px-8 rounded-full hover:bg-white/30 transition-colors">
@@ -85,14 +157,16 @@ export default function CommunityPage() {
             </div>
 
             {/* Compose */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
+            <div id="compose-box" className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="w-10 h-10 rounded-full bg-[#E81C74] text-white flex items-center justify-center font-bold shrink-0 hidden sm:flex">
-                  A
+                  Y
                 </div>
                 <div className="flex-1 space-y-4">
                   <textarea
                     rows={2}
+                    value={composeText}
+                    onChange={(e) => setComposeText(e.target.value)}
                     placeholder="Start a new discussion..."
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#E81C74] focus:bg-white transition-all resize-none"
                   />
@@ -104,8 +178,12 @@ export default function CommunityPage() {
                         </button>
                       ))}
                     </div>
-                    <button className="w-full sm:w-auto bg-[#E81C74] text-white px-8 py-2.5 rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors">
-                      Post Discussion
+                    <button
+                      onClick={handlePost}
+                      disabled={posting || !composeText.trim()}
+                      className="w-full sm:w-auto bg-[#E81C74] text-white px-8 py-2.5 rounded-lg font-bold text-sm hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {posting ? "Posting..." : "Post Discussion"}
                     </button>
                   </div>
                 </div>
