@@ -11,6 +11,7 @@ type Lesson = {
   moduleId: string;
   title: string;
   youtubeVideoId: string;
+  youtubePlaylistId?: string;
   order: number;
   completed: boolean;
   notes: string;
@@ -215,6 +216,7 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
                 <YouTubePlayer
                   videoId={lesson.youtubeVideoId}
                   lessonId={lesson.id}
+                  playlistId={lesson.youtubePlaylistId}
                 />
               </div>
 

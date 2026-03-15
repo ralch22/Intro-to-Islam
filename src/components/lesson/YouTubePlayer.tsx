@@ -38,10 +38,40 @@ declare global {
 interface YouTubePlayerProps {
   videoId: string;
   lessonId: string;
+  /** Fallback: embed the full playlist when no individual videoId is available */
+  playlistId?: string;
   onProgress?: (seconds: number) => void;
 }
 
-export function YouTubePlayer({ videoId, lessonId, onProgress }: YouTubePlayerProps) {
+/**
+ * Playlist-only embed — simple iframe, no IFrame API needed.
+ * Used when individual video IDs are not yet available (e.g. no YouTube API key).
+ */
+function PlaylistEmbed({ playlistId }: { playlistId: string }) {
+  const src = `https://www.youtube.com/embed/videoseries?list=${playlistId}&rel=0&modestbranding=1`;
+  return (
+    <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+      <iframe
+        src={src}
+        className="absolute inset-0 w-full h-full rounded-xl bg-black"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="Course Playlist"
+      />
+    </div>
+  );
+}
+
+export function YouTubePlayer({ videoId, lessonId, playlistId, onProgress }: YouTubePlayerProps) {
+  // If no individual videoId, fall back to playlist embed
+  if (!videoId && playlistId) {
+    return <PlaylistEmbed playlistId={playlistId} />;
+  }
+
+  return <YouTubeAPIPlayer videoId={videoId} lessonId={lessonId} onProgress={onProgress} />;
+}
+
+function YouTubeAPIPlayer({ videoId, lessonId, onProgress }: Omit<YouTubePlayerProps, "playlistId">) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -66,7 +96,6 @@ export function YouTubePlayer({ videoId, lessonId, onProgress }: YouTubePlayerPr
         events: {
           onReady: () => {
             if (mounted) setReady(true);
-            // Save progress every 5 seconds while playing
             intervalRef.current = setInterval(() => {
               if (playerRef.current) {
                 const t = playerRef.current.getCurrentTime?.() ?? 0;

@@ -1,3 +1,5 @@
+import { getPlaylistItems, playlistItemsToLessons, COURSE_PLAYLISTS } from "@/lib/youtube";
+
 const MOODLE_URL = process.env.MOODLE_URL;
 const MOODLE_TOKEN = process.env.MOODLE_TOKEN;
 
@@ -25,12 +27,16 @@ const MOCK_COURSES = [
   },
 ];
 
+// Fallback lessons used only when neither Moodle NOR YouTube API key is available.
+// youtubeVideoId is intentionally empty — YouTubePlayer will fall back to playlist embed.
 const MOCK_LESSONS = [
-  { id: "1-1", courseId: "2", moduleId: "1", title: "Introduction to Islam", youtubeVideoId: "dQw4w9WgXcQ", order: 1, completed: true, notes: "Islam means submission to the will of God. It is a monotheistic faith that emphasizes the oneness of Allah." },
-  { id: "1-2", courseId: "2", moduleId: "1", title: "The Five Pillars", youtubeVideoId: "dQw4w9WgXcQ", order: 2, completed: true, notes: "The Five Pillars of Islam are the core acts of worship: Shahada, Salah, Zakat, Sawm, and Hajj." },
-  { id: "2-1", courseId: "2", moduleId: "2", title: "Understanding Tawheed", youtubeVideoId: "dQw4w9WgXcQ", order: 3, completed: false, notes: "Tawheed is the concept of monotheism in Islam — the belief in the oneness of Allah." },
-  { id: "2-2", courseId: "2", moduleId: "2", title: "Angels and Belief", youtubeVideoId: "dQw4w9WgXcQ", order: 4, completed: false, notes: "Belief in angels is the second article of faith in Islam. Angels are created from light and serve Allah." },
-  { id: "3-1", courseId: "2", moduleId: "3", title: "Salah — The Prayer", youtubeVideoId: "dQw4w9WgXcQ", order: 5, completed: false, notes: "Salah is the ritual prayer performed five times daily. It is the second pillar of Islam." },
+  { id: "2-pl-1", courseId: "2", moduleId: "1", title: "Introduction to Islam", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1C_UXk3Ko4pb5uIh7usQjsu", order: 1, completed: true, notes: "Islam means submission to the will of God. It is a monotheistic faith that emphasises the oneness of Allah." },
+  { id: "2-pl-2", courseId: "2", moduleId: "1", title: "The Five Pillars", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1C_UXk3Ko4pb5uIh7usQjsu", order: 2, completed: true, notes: "The Five Pillars of Islam are the core acts of worship: Shahada, Salah, Zakat, Sawm, and Hajj." },
+  { id: "2-pl-3", courseId: "2", moduleId: "2", title: "Understanding Tawheed", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1C_UXk3Ko4pb5uIh7usQjsu", order: 3, completed: false, notes: "Tawheed is the concept of monotheism in Islam — the belief in the oneness of Allah." },
+  { id: "2-pl-4", courseId: "2", moduleId: "2", title: "Angels and Belief", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1C_UXk3Ko4pb5uIh7usQjsu", order: 4, completed: false, notes: "Belief in angels is the second article of faith in Islam. Angels are created from light and serve Allah." },
+  { id: "2-pl-5", courseId: "2", moduleId: "3", title: "Salah — The Prayer", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1C_UXk3Ko4pb5uIh7usQjsu", order: 5, completed: false, notes: "Salah is the ritual prayer performed five times daily. It is the second pillar of Islam." },
+  { id: "3-pl-1", courseId: "3", moduleId: "1", title: "Birth & Early Life", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1B549C1kmtFHOpK194F1CgO", order: 1, completed: false, notes: "The Prophet Muhammad ﷺ was born in Makkah around 570 CE." },
+  { id: "3-pl-2", courseId: "3", moduleId: "1", title: "The First Revelation", youtubeVideoId: "", youtubePlaylistId: "PLVnGeZczzv1B549C1kmtFHOpK194F1CgO", order: 2, completed: false, notes: "The first revelation came to the Prophet ﷺ in the Cave of Hira." },
 ];
 
 const MOCK_MODULES = [
@@ -63,12 +69,29 @@ export async function getCourseById(id: string) {
 }
 
 export async function getCourseLessons(courseId: string) {
+  // 1. Try Moodle (live)
   const data = await moodleRequest("core_course_get_contents", { courseid: courseId });
-  return data ?? MOCK_LESSONS.filter(l => l.courseId === courseId);
+  if (data) return data;
+
+  // 2. Try YouTube Data API — builds real lesson list from playlist
+  const playlistId = COURSE_PLAYLISTS[courseId];
+  if (playlistId) {
+    const items = await getPlaylistItems(playlistId);
+    if (items.length > 0) return playlistItemsToLessons(courseId, items);
+  }
+
+  // 3. Static fallback — embeds the playlist (no individual video IDs)
+  return MOCK_LESSONS.filter(l => l.courseId === courseId);
 }
 
 export async function getLessonById(lessonId: string) {
-  return MOCK_LESSONS.find(l => l.id === lessonId) ?? MOCK_LESSONS[0];
+  // Check mock lessons first
+  const mock = MOCK_LESSONS.find(l => l.id === lessonId);
+  if (mock) return mock;
+  // Try to derive course from lessonId prefix (e.g. "2-yt-3" → courseId "2")
+  const courseId = lessonId.split("-")[0];
+  const lessons = await getCourseLessons(courseId);
+  return (lessons as typeof MOCK_LESSONS).find(l => l.id === lessonId) ?? MOCK_LESSONS[0];
 }
 
 export async function getModulesByCourse(courseId: string) {
