@@ -10,44 +10,82 @@
 
 The IntroToIslam Student Learning Portal is a **Next.js PWA** built for [introtoislam.org](https://introtoislam.org) — a volunteer-run, donor-sustained da'wah initiative serving students across Sydney, Adelaide, Melbourne, and beyond.
 
-Today, students navigate between YouTube playlists, manually shared Zoom links, and ad hoc email contact for private sessions. This portal unifies all three into one cohesive, branded environment that installs on iOS and Android home screens without any App Store submission.
+Students previously navigated between YouTube playlists, manually shared Zoom links, and ad hoc email contact for private sessions. This portal unifies all three into one cohesive, branded environment that installs on iOS and Android home screens without any App Store submission.
 
 > **Guiding Principle:** All course content is permanently free. No paywall exists at any point in the student journey.
 
 ---
 
+## Sprint Status
+
+| Sprint | Status | Scope |
+|--------|--------|-------|
+| **Sprint 1 — Foundation** | ✅ Complete | Scaffold, 6 screens, PWA manifest, NextAuth SSO, onboarding carousel, A2HS prompt |
+| **Sprint 2 — Learning Core** | ✅ Complete | Moodle REST client, YouTube Player API, lesson completion, Zoom schedule, Zoom webhook, dashboard |
+| **Sprint 3 — Engagement** | ✅ Complete | Cal.com booking, Web Push VAPID, Workbox offline caching, Background Sync, activity feed, notes/discussion tabs |
+| **Sprint 4 — Polish & Launch** | ⏳ Pending | Progress screen, completion badge, student profile, Lighthouse audit, WCAG pass, Hetzner deploy |
+
+---
+
 ## Features
 
-### Screens (all built)
+### All Screens
 
 | Route | Screen |
 |-------|--------|
-| `/` | **Dashboard** — course progress ring, next-class countdown + Join, module list, donation widget, community feed |
-| `/courses` | **Course Library** — search, category filter chips, course cards with progress |
-| `/courses/[id]` | **Course Details** — hero, tabbed overview/curriculum/instructor, accordion modules, resources |
-| `/courses/[id]/lesson/[lessonId]` | **Active Lesson** — YouTube embed, lesson content, Prev/Next nav, Mark Complete, notes |
-| `/schedule` | **Live Class Schedule** — countdown timer, Join Zoom, past recordings archive, mini calendar |
-| `/community` | **Community Hub** — discussion feed, post composer, instructor replies, guidelines |
+| `/` | **Dashboard** — real course progress ring, next-class countdown + Join, activity feed, module list, donation widget |
+| `/courses` | **Course Library** — search, progress bars, real Moodle data |
+| `/courses/[id]` | **Course Details** — tabbed overview/curriculum/instructor, accordion modules |
+| `/courses/[id]/lesson/[lessonId]` | **Active Lesson** — YouTube Player API embed, Notes/Discussion/About tabs, Prev/Next nav, Mark Complete |
+| `/schedule` | **Live Class Schedule** — Zoom meetings, live countdown, cohort badges, 30-min join window |
+| `/community` | **Community Hub** — discussion feed, post composer |
+| `/booking` | **1:1 Booking** — instructor profiles, Cal.com embed |
+| `/profile/bookings` | **My Bookings** — status badges, cancel/reschedule, Google Cal + .ics export |
+| `/profile/notifications` | **Notifications** — per-category push preference toggles |
+| `/login` | **Login** — WordPress OAuth2 SSO |
 
-### Integration Roadmap
+### Key Capabilities
 
-| Feature | Sprint |
-|---------|--------|
-| ✅ All 6 screens — fully navigatable | Done |
-| ✅ PWA manifest + Workbox service worker | Done |
-| ✅ Vercel deployment | Done |
-| WordPress OAuth2 SSO login (NextAuth.js) | Sprint 1 |
-| Add to Home Screen prompt | Sprint 1 |
-| Moodle REST API — real courses & progress | Sprint 2 |
-| YouTube iframe API — real video playback | Sprint 2 |
-| Mark as Complete → Moodle write-back | Sprint 2 |
-| Zoom API — live class schedule + join links | Sprint 3 |
-| Zoom recording → YouTube upload pipeline | Sprint 3 |
-| Cal.com embed — private 1:1 booking | Sprint 3 |
-| Offline caching — course structure + app shell | Sprint 3 |
-| Web Push — class & consultation reminders | Sprint 4 |
-| Progress screen + completion celebration | Sprint 4 |
-| Mobile UAT (20-student beta) + Lighthouse audit | Sprint 4 |
+| Capability | Implementation |
+|------------|---------------|
+| PWA Install | `beforeinstallprompt` (Android) + Safari share instructions (iOS) — shown on 2nd visit |
+| Onboarding | 3-screen carousel on first launch; `localStorage` flag prevents repeat |
+| Video Playback | YouTube IFrame API — `rel=0`, `modestbranding`, resume from saved timestamp |
+| Offline Support | Workbox NetworkFirst for API routes; CacheFirst for static assets; Background Sync for lesson completions via IndexedDB |
+| Offline Banner | Amber banner within 2s of connectivity loss |
+| Push Notifications | VAPID Web Push — class reminders (60 min before), consultation reminders, new content alerts |
+| Lesson Completion | POST to Moodle REST write-back; idempotent; queued offline via Background Sync |
+| Discussion | Per-lesson Moodle forum thread — load + post replies |
+| Zoom Webhook | HMAC-SHA256 verified; `recording.completed` triggers YouTube upload pipeline |
+| Cal.com Webhook | `BOOKING_CREATED/CANCELLED/RESCHEDULED` events; auto-creates Zoom meeting |
+| YouTube Sync Cron | Vercel cron daily at 02:00 UTC — syncs playlist video IDs to Moodle |
+
+---
+
+## API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/auth/[...nextauth]` | GET/POST | NextAuth.js WordPress OAuth2 handler |
+| `/api/dashboard` | GET | Aggregated progress + next Zoom meeting |
+| `/api/dashboard/activity` | GET | Last 5 student activity events (90-day window) |
+| `/api/courses` | GET | All Moodle courses |
+| `/api/courses/[id]` | GET | Course + lessons + modules |
+| `/api/courses/[id]/enrol` | POST | Enrol student in course |
+| `/api/lessons/[lessonId]/complete` | POST | Mark lesson complete → Moodle write-back |
+| `/api/lessons/[lessonId]/notes` | GET | Lesson instructor notes |
+| `/api/lessons/[lessonId]/discussion` | GET/POST | Forum thread posts + post reply |
+| `/api/schedule` | GET | Upcoming Zoom meetings |
+| `/api/schedule/[id]/participants` | GET | Live participant count |
+| `/api/zoom/webhook` | POST | HMAC-verified Zoom webhook (recording.completed) |
+| `/api/cal/bookings` | GET | Student Cal.com bookings |
+| `/api/cal/webhook` | POST | Cal.com booking events |
+| `/api/push/subscribe` | GET/POST | VAPID public key + save subscription |
+| `/api/push/send` | POST | Admin push sender |
+| `/api/cron/youtube-sync` | GET | Daily YouTube playlist sync |
+| `/api/cron/class-reminders` | GET | Class reminder push cron |
+
+All API clients include **mock fallback data** when env vars are absent — the app deploys and runs without any live backend credentials.
 
 ---
 
@@ -59,13 +97,13 @@ Today, students navigate between YouTube playlists, manually shared Zoom links, 
 | Styling | Tailwind CSS — brand token system |
 | PWA | next-pwa + Workbox Service Worker |
 | Auth | NextAuth.js v5 → WordPress OAuth2 SSO |
-| State | Zustand (client) + TanStack Query (server) |
 | LMS | Moodle REST API |
-| Video | YouTube iframe API + YouTube Data API v3 |
+| Video | YouTube IFrame API (Player API, `rel=0`, timestamp resume) |
 | Live Classes | Zoom API v2 (server-to-server OAuth) |
-| Booking | Cal.com embed SDK (self-hosted) |
-| Notifications | Web Push API + VAPID, triggered by Mautic |
-| Front-end Hosting | Vercel |
+| Booking | Cal.com embed SDK (`@calcom/embed-react`) |
+| Notifications | Web Push API + VAPID (`web-push`) |
+| Offline | Workbox NetworkFirst/CacheFirst + Background Sync (IndexedDB) |
+| Front-end Hosting | Vercel (crons: YouTube sync daily, class reminders daily) |
 | Back-end Hosting | Hetzner CX32 VPS — Docker Compose + Nginx |
 | Databases | PostgreSQL 16 (Moodle) · MySQL 8 (WordPress) · Redis 7 |
 | CDN / Security | Cloudflare Free — DNS, CDN, DDoS, WAF, SSL |
@@ -74,8 +112,6 @@ Today, students navigate between YouTube playlists, manually shared Zoom links, 
 ---
 
 ## Design System
-
-Derived from high-fidelity prototypes built in UXPilot.
 
 | Token | Value |
 |-------|-------|
@@ -91,8 +127,6 @@ Derived from high-fidelity prototypes built in UXPilot.
 ---
 
 ## Architecture
-
-The portal is a cohesive front-end layer over existing infrastructure — nothing is re-hosted or rebuilt unnecessarily.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -118,7 +152,7 @@ The portal is a cohesive front-end layer over existing infrastructure — nothin
 
 **Single Sign-On:** Students register once on `introtoislam.org` (WordPress). The same credentials work across the PWA, Moodle, and Cal.com via WordPress OAuth2 → NextAuth.js.
 
-**Video at zero cost:** All course content lives on existing YouTube playlists. The PWA embeds via the YouTube iframe API with related-video suppression (`rel=0`).
+**Video at zero cost:** All course content lives on existing YouTube playlists. The PWA embeds via the YouTube IFrame API with related-video suppression (`rel=0`).
 
 | Playlist | ID |
 |----------|----|
@@ -133,28 +167,55 @@ The portal is a cohesive front-end layer over existing infrastructure — nothin
 intro-to-islam-pwa/
 ├── public/
 │   ├── manifest.json                    # PWA manifest
+│   ├── sw-custom.js                     # Push handler + Background Sync SW
 │   └── icons/                           # 192×192 and 512×512 app icons
+├── docs/
+│   ├── PRD.md                           # Product Requirements Document
+│   ├── SRS.md                           # Software Requirements Specification
+│   ├── ARCHITECTURE.md                  # Solution Architecture
+│   ├── RTM.md                           # Requirements Traceability Matrix
+│   └── SPRINT-SCOPE.md                  # Sprint scope + acceptance criteria
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx                   # Root layout — Navbar + Footer
-│   │   ├── globals.css                  # Brand tokens, gradient utilities
-│   │   ├── page.tsx                     # Dashboard
-│   │   ├── courses/
-│   │   │   ├── page.tsx                 # Course Library
-│   │   │   └── [id]/
-│   │   │       ├── page.tsx             # Course Details
-│   │   │       └── lesson/
-│   │   │           └── [lessonId]/
-│   │   │               └── page.tsx     # Active Lesson
-│   │   ├── schedule/
-│   │   │   └── page.tsx                 # Live Class Schedule
-│   │   └── community/
-│   │       └── page.tsx                 # Community Hub
-│   └── components/
-│       └── layout/
-│           ├── Navbar.tsx               # Sticky nav, active-state routing
-│           └── Footer.tsx               # Shared footer
-└── next.config.ts                       # next-pwa + Turbopack config
+│   │   ├── layout.tsx                   # Root layout — Navbar, Footer, OfflineBanner
+│   │   ├── page.tsx                     # Dashboard (real Moodle + Zoom data)
+│   │   ├── api/
+│   │   │   ├── auth/[...nextauth]/      # NextAuth route handler
+│   │   │   ├── courses/                 # Moodle course proxy
+│   │   │   ├── dashboard/               # Aggregated dashboard + activity
+│   │   │   ├── lessons/[lessonId]/      # Complete, notes, discussion
+│   │   │   ├── schedule/                # Zoom schedule + participants
+│   │   │   ├── zoom/webhook/            # Zoom recording webhook
+│   │   │   ├── cal/                     # Cal.com bookings + webhook
+│   │   │   ├── push/                    # VAPID subscribe + send
+│   │   │   └── cron/                    # youtube-sync + class-reminders
+│   │   ├── courses/                     # Course library + detail + lesson
+│   │   ├── schedule/                    # Live class schedule
+│   │   ├── booking/                     # 1:1 instructor booking
+│   │   ├── profile/
+│   │   │   ├── bookings/                # My bookings
+│   │   │   └── notifications/           # Push preferences
+│   │   ├── community/                   # Community hub
+│   │   └── login/                       # WordPress SSO login
+│   ├── components/
+│   │   ├── layout/                      # Navbar + Footer
+│   │   ├── auth/                        # AuthButton + SessionProviderWrapper
+│   │   ├── lesson/                      # YouTubePlayer + LessonView
+│   │   ├── booking/                     # CalEmbed
+│   │   ├── onboarding/                  # OnboardingCarousel
+│   │   └── pwa/                         # A2HSBanner + OfflineBanner
+│   ├── hooks/
+│   │   ├── useOnboarding.ts             # First-visit carousel flag
+│   │   ├── useA2HS.ts                   # beforeinstallprompt handler
+│   │   ├── useVideoProgress.ts          # YouTube timestamp persistence
+│   │   └── usePushNotifications.ts      # VAPID subscription flow
+│   └── lib/
+│       ├── auth.ts                      # NextAuth v5 config
+│       ├── moodle.ts                    # Moodle REST client (mock fallback)
+│       ├── zoom.ts                      # Zoom S2S OAuth client (mock fallback)
+│       ├── push.ts                      # web-push VAPID utility
+│       └── youtube-upload.ts            # Zoom recording → YouTube pipeline
+└── vercel.json                          # Vercel cron schedules
 ```
 
 ---
@@ -166,61 +227,6 @@ intro-to-islam-pwa/
 | **Amirah, 28** | Sydney | Self-paced learner, mobile commuter | Progress tracking, offline notes, no sign-up friction |
 | **Omar, 45** | Adelaide | Weekly live class attendee | Reliable schedule, push reminders, replay access |
 | **Yusuf, 22** | Melbourne | Guided seeker, shy in groups | Easy 1:1 booking, automatic Zoom link, no phone calls |
-
----
-
-## API Integrations
-
-| API | Key Endpoints |
-|-----|--------------|
-| WordPress OAuth2 | `POST /oauth/token` · `GET /oauth/authorize` |
-| Moodle REST | `core_course_get_courses` · `core_enrol_enrol_users` · `core_completion_update_activity_completion_status_manually` · `mod_forum_add_discussion` |
-| YouTube Data API v3 | `GET /playlistItems` · `GET /videos` (10,000 units/day free quota) |
-| YouTube iframe API | Client-side `YT.Player` — `onStateChange`, `onReady` events |
-| Zoom API v2 | `POST /users/{id}/meetings` · `GET /meetings/{id}` · webhook: `recording.completed` |
-| Cal.com Embed + API | JS embed SDK · `/api/v2/bookings` · webhooks: `booking.created`, `booking.cancelled` |
-| Web Push (VAPID) | `HTTP POST` to browser push endpoint, triggered by Mautic webhooks |
-
----
-
-## Sprint Roadmap
-
-**8 weeks · 4 × 2-week sprints**
-
-### Sprint 1 — Foundation (Weeks 1–2) ✅
-- [x] Next.js 16 + TypeScript + Tailwind scaffold
-- [x] All 6 UI screens converted to Next.js pages
-- [x] Shared Navbar (active routing) + Footer
-- [x] PWA manifest.json + next-pwa + Workbox
-- [x] Deployed to Vercel · Pushed to GitHub
-- [ ] NextAuth.js v5 + WordPress OAuth2 SSO
-- [ ] 3-screen onboarding carousel (first visit)
-- [ ] Add to Home Screen prompt (second visit)
-
-### Sprint 2 — Core Learning (Weeks 3–4)
-- [ ] Moodle REST API — course list, lesson list, enrolment
-- [ ] YouTube iframe API — real video embed, `rel=0`, timestamp restore
-- [ ] Mark as Complete → Moodle REST write-back
-- [ ] Progress bar from live Moodle completion data
-- [ ] Lesson Notes tab (Moodle page resources)
-- [ ] Discussion tab per lesson (Moodle forum thread)
-
-### Sprint 3 — Live Classes & Booking (Weeks 5–6)
-- [ ] Zoom API — upcoming class schedule, join URLs (active 30 min before)
-- [ ] Zoom webhook → YouTube upload → Moodle link (replay pipeline)
-- [ ] Cal.com embed — instructor browse + date/time picker + booking confirmation
-- [ ] Zoom meeting auto-created on Cal.com booking
-- [ ] Workbox Service Worker — offline course structure + app shell
-
-### Sprint 4 — Notifications, Progress & Launch (Weeks 7–8)
-- [ ] Web Push — 60-min pre-class and pre-consultation reminders
-- [ ] Notification preference screen in student profile
-- [ ] Progress screen (per-course lesson count + %)
-- [ ] Course completion congratulations + shareable image
-- [ ] Mobile UAT with 20-student beta group
-- [ ] Lighthouse audit — target ≥ 90 all four categories
-- [ ] WCAG 2.1 AA accessibility pass (axe-core scan)
-- [ ] Production deployment on Hetzner
 
 ---
 
@@ -252,7 +258,7 @@ intro-to-islam-pwa/
 | YouTube, Cloudflare, Cal.com, Moodle | Free |
 | **Total** | **~AUD $68–73** |
 
-> 10 donors at $7/month fully sustains the platform. Donations are voluntary and managed via WooCommerce + Stripe — never a prerequisite for course access.
+> 10 donors at $7/month fully sustains the platform. Donations are voluntary — never a prerequisite for course access.
 
 ---
 
@@ -271,43 +277,12 @@ intro-to-islam-pwa/
 
 - All Moodle and Zoom API calls are server-side (Next.js API routes) — tokens never exposed to the browser
 - OAuth2 state parameter + `SameSite=Strict` cookies prevent CSRF
-- JWT access tokens expire in 15 minutes; refresh tokens in 30 days; compromised tokens revocable via Redis blacklist
-- Rate limiting: 10 req/min on auth endpoints, 300 req/min per authenticated user
+- JWT access tokens expire in 15 minutes; refresh tokens in 30 days
+- Zoom webhook verified via HMAC-SHA256 (`x-zm-signature`)
+- Cal.com webhook verified via HMAC-SHA256 (`x-cal-signature-256`)
 - Content Security Policy headers set; YouTube iframe explicitly allowlisted
 - HTTPS enforced via Cloudflare — HSTS header enabled
-- OWASP Top 10 mitigations validated by ZAP scan pre-launch
 - Student PII stored on EU-region Hetzner VPS — compliant with Australian Privacy Act 1988
-
----
-
-## Success Metrics (90 days post-launch)
-
-| Metric | Target |
-|--------|--------|
-| PWA Install Rate | > 30% of mobile visitors |
-| Return Visit Rate | > 50% in month 2 |
-| Lesson Completion Rate | > 40% complete ≥ 3 lessons |
-| Zoom No-Show Reduction | > 20% vs pre-PWA baseline |
-| Monthly Consultations | > 10 bookings/month |
-| Push Notification Opt-In | > 50% of students |
-| Donation Conversion | > 2% of active monthly students |
-| Lighthouse Score | ≥ 90 all categories (CI/CD enforced) |
-| JS Error Rate | < 0.5% of sessions |
-
----
-
-## Future Phases
-
-| Feature | Phase |
-|---------|-------|
-| Native iOS / Android apps (React Native shell over same Moodle API) | 2 |
-| Arabic RTL interface + multilingual support (Urdu, etc.) | 2–3 |
-| PDF completion certificates + Open Badges 2.0 | 2 |
-| Moodle quiz integration | 2 |
-| Discourse community forum (SSO-linked) | 2 |
-| Donation thermometer widget | 2 |
-| In-app live streaming (WebRTC, replacing Zoom for large cohorts) | 3 |
-| Kubernetes migration (> 5,000 students) | 3 |
 
 ---
 
@@ -347,16 +322,31 @@ MOODLE_TOKEN=
 
 # YouTube
 YOUTUBE_API_KEY=
+YOUTUBE_OAUTH_CLIENT_ID=
+YOUTUBE_OAUTH_CLIENT_SECRET=
+YOUTUBE_REFRESH_TOKEN=
 
 # Zoom (server-to-server OAuth)
 ZOOM_ACCOUNT_ID=
 ZOOM_CLIENT_ID=
 ZOOM_CLIENT_SECRET=
+ZOOM_WEBHOOK_SECRET=
+
+# Cal.com
+CAL_API_KEY=
+CAL_WEBHOOK_SECRET=
 
 # Web Push (VAPID)
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
+VAPID_EMAIL=mailto:admin@introtoislam.org
+
+# Admin
+ADMIN_SECRET=
+CRON_SECRET=
 ```
+
+> All env vars are optional for local dev — the app uses mock data when they are absent.
 
 ---
 
@@ -371,6 +361,37 @@ vercel --prod
 ```bash
 docker compose up -d
 ```
+
+---
+
+## Success Metrics (90 days post-launch)
+
+| Metric | Target |
+|--------|--------|
+| PWA Install Rate | > 30% of mobile visitors |
+| Return Visit Rate | > 50% in month 2 |
+| Lesson Completion Rate | > 40% complete ≥ 3 lessons |
+| Zoom No-Show Reduction | > 20% vs pre-PWA baseline |
+| Monthly Consultations | > 10 bookings/month |
+| Push Notification Opt-In | > 50% of students |
+| Donation Conversion | > 2% of active monthly students |
+| Lighthouse Score | ≥ 90 all categories (CI/CD enforced) |
+| JS Error Rate | < 0.5% of sessions |
+
+---
+
+## Future Phases
+
+| Feature | Phase |
+|---------|-------|
+| Native iOS / Android apps (React Native shell over same Moodle API) | 2 |
+| Arabic RTL interface + multilingual support (Urdu, etc.) | 2–3 |
+| PDF completion certificates + Open Badges 2.0 | 2 |
+| Moodle quiz integration | 2 |
+| Discourse community forum (SSO-linked) | 2 |
+| Donation thermometer widget | 2 |
+| In-app live streaming (WebRTC, replacing Zoom for large cohorts) | 3 |
+| Kubernetes migration (> 5,000 students) | 3 |
 
 ---
 
