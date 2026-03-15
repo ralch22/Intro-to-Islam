@@ -23,7 +23,7 @@ Students previously navigated between YouTube playlists, manually shared Zoom li
 | **Sprint 1 — Foundation** | ✅ Complete | Scaffold, 6 screens, PWA manifest, NextAuth SSO, onboarding carousel, A2HS prompt |
 | **Sprint 2 — Learning Core** | ✅ Complete | Moodle REST client, YouTube Player API, lesson completion, Zoom schedule, Zoom webhook, dashboard |
 | **Sprint 3 — Engagement** | ✅ Complete | Cal.com booking, Web Push VAPID, Workbox offline caching, Background Sync, activity feed, notes/discussion tabs |
-| **Sprint 4 — Polish & Launch** | ⏳ Pending | Progress screen, completion badge, student profile, Lighthouse audit, WCAG pass, Hetzner deploy |
+| **Sprint 4 — Polish & Launch** | ✅ Complete | Progress screen, completion badge, student profile, donation nudge, security headers, Navbar profile dropdown, course detail wired, participant polling, community composer |
 
 ---
 

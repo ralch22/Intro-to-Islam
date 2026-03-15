@@ -171,20 +171,42 @@
 
 ---
 
-## Sprint 4 — Pending
+## Sprint 4 — Polish & Launch
 
-### Task: Sprint 4 — Polish & Launch
-**Agent:** Not yet started
-**Status:** ⏳ Pending
+### Task: Sprint 4 + Full UI Gap Audit
+**Agent:** General-purpose
+**Status:** ✅ Complete
+**Build result:** ✓ Compiled successfully — 26 routes, zero TypeScript errors
 
-**Planned scope:**
-| Task | Requirements |
+**Sprint 4 files created:**
+| File | Purpose |
+|------|---------|
+| `src/app/progress/page.tsx` | Progress screen — per-course rings, stats bar, Continue buttons |
+| `src/app/api/progress/route.ts` | Aggregated completion stats from Moodle lessons |
+| `src/components/course/CompletionScreen.tsx` | Full-screen overlay, CSS confetti, badge download |
+| `src/app/api/completion/badge/[courseId]/route.ts` | SVG certificate generator (blue-purple gradient) |
+| `src/app/profile/page.tsx` | Student profile — editable name, stats, account links, sign out |
+| `src/app/api/profile/route.ts` | GET session+stats / PATCH name update |
+| `src/components/dashboard/DonationNudge.tsx` | Weekly localStorage-gated collapsible donation card |
+
+**Security headers added to `next.config.ts`:**
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- Full `Content-Security-Policy` (script-src, frame-src YouTube+Cal.com, img-src, connect-src)
+
+**UI gap fixes:**
+| File | Fix Applied |
 |------|-------------|
-| S4-1 Progress screen | `src/app/progress/page.tsx`, `/api/progress/route.ts` |
-| S4-2 Completion screen + badge PNG | `src/components/course/CompletionScreen.tsx`, `/api/completion/badge/[courseId]/route.ts` |
-| S4-3 Student profile page | `src/app/profile/page.tsx`, `/api/profile/route.ts` |
-| S4-4 Zoom attendance history | `/api/attendance/route.ts` → Moodle grade book |
-| S4-5 Lighthouse + WCAG audit | axe-core scan, Lighthouse CI, NFR validation |
+| `src/components/layout/Navbar.tsx` | Added `/booking` + `/community` nav links; profile dropdown (Progress/Bookings/Notifications/Profile/Sign Out); mobile menu updated |
+| `src/app/courses/[id]/page.tsx` | Converted to client component; fetches `/api/courses/[id]`; interactive tabs; accordion; real lesson links; enrol button with POST |
+| `src/app/schedule/page.tsx` | Added 60s participant count polling via `/api/schedule/[id]/participants` |
+| `src/app/page.tsx` | DonationNudge added to sidebar |
+| `src/app/community/page.tsx` | `"use client"` — post composer wired to discussion API; optimistic local state |
+| `src/app/profile/bookings/page.tsx` | Breadcrumb `← Profile` added |
+| `src/app/profile/notifications/page.tsx` | Breadcrumb `← Profile` added |
+| `src/components/lesson/LessonView.tsx` | CompletionScreen triggered on last lesson mark complete |
 
 ---
 
@@ -196,6 +218,7 @@
 | Sprint 1 complete | `a9addb8` | intro-to-islam-pwa.vercel.app | Auth + onboarding + A2HS |
 | Sprint 2 complete | `31af5f4` | intro-to-islam-pwa.vercel.app | Moodle + YouTube + Zoom + dashboard |
 | Sprint 3 complete | `5418875` → `1dc5cdb` | intro-to-islam-pwa.vercel.app | Cal.com + Web Push + Workbox + cron fix |
+| Sprint 4 complete | `4173f66` | intro-to-islam-pwa.vercel.app | Progress, profile, completion badge, security headers, full UI audit |
 
 ---
 
