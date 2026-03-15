@@ -8,34 +8,39 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function useA2HS() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showA2HS, setShowA2HS] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+
+  const [isIOS] = useState(() =>
+    typeof navigator !== "undefined"
+      ? /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream
+      : false
+  );
+
+  const [showA2HS, setShowA2HS] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      if (localStorage.getItem("iti_a2hs_dismissed")) return false;
+      const sessions = parseInt(localStorage.getItem("iti_session_count") ?? "0");
+      if (sessions < 2) return false;
+      const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
+      return ios && !window.matchMedia("(display-mode: standalone)").matches;
+    } catch { return false; }
+  });
 
   useEffect(() => {
-    // Detect iOS Safari
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as Window & { MSStream?: unknown }).MSStream;
-    setIsIOS(ios);
-
-    // Track session count
-    const sessions = parseInt(localStorage.getItem("iti_session_count") ?? "0") + 1;
-    localStorage.setItem("iti_session_count", String(sessions));
-
-    const dismissed = localStorage.getItem("iti_a2hs_dismissed");
-    if (dismissed) return;
-
-    // Show on 2nd+ session
-    if (sessions >= 2) {
-      if (ios) {
-        // Check not already installed
-        const isStandalone = window.matchMedia("(display-mode: standalone)").matches;
-        if (!isStandalone) setShowA2HS(true);
-      }
-    }
+    // Increment session count on mount
+    try {
+      const sessions = parseInt(localStorage.getItem("iti_session_count") ?? "0") + 1;
+      localStorage.setItem("iti_session_count", String(sessions));
+    } catch { /* ignore */ }
 
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      if (sessions >= 2) setShowA2HS(true);
+      try {
+        const sessions = parseInt(localStorage.getItem("iti_session_count") ?? "0");
+        const dismissed = localStorage.getItem("iti_a2hs_dismissed");
+        if (!dismissed && sessions >= 2) setShowA2HS(true);
+      } catch { /* ignore */ }
     };
 
     window.addEventListener("beforeinstallprompt", handler);

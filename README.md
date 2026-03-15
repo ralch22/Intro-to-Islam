@@ -24,6 +24,7 @@ Students previously navigated between YouTube playlists, manually shared Zoom li
 | **Sprint 2 — Learning Core** | ✅ Complete | Moodle REST client, YouTube Player API, lesson completion, Zoom schedule, Zoom webhook, dashboard |
 | **Sprint 3 — Engagement** | ✅ Complete | Cal.com booking, Web Push VAPID, Workbox offline caching, Background Sync, activity feed, notes/discussion tabs |
 | **Sprint 4 — Polish & Launch** | ✅ Complete | Progress screen, completion badge, student profile, donation nudge, security headers, Navbar profile dropdown, course detail wired, participant polling, community composer |
+| **Sprint 5 — Pre-Hetzner Hardening** | ✅ Complete | Security guards, PWA icons, push persistence, error boundaries, data layer fixes, DevOps scaffolding |
 
 ---
 
@@ -43,6 +44,7 @@ Students previously navigated between YouTube playlists, manually shared Zoom li
 | `/profile/bookings` | **My Bookings** — status badges, cancel/reschedule, Google Cal + .ics export |
 | `/profile/notifications` | **Notifications** — per-category push preference toggles |
 | `/login` | **Login** — WordPress OAuth2 SSO |
+| `/offline` | **Offline Fallback** — served by Service Worker when network unavailable |
 
 ### Key Capabilities
 
@@ -84,6 +86,7 @@ Students previously navigated between YouTube playlists, manually shared Zoom li
 | `/api/push/send` | POST | Admin push sender |
 | `/api/cron/youtube-sync` | GET | Daily YouTube playlist sync |
 | `/api/cron/class-reminders` | GET | Class reminder push cron |
+| `/api/health` | GET | Health check — returns service status for uptime monitoring |
 
 All API clients include **mock fallback data** when env vars are absent — the app deploys and runs without any live backend credentials.
 
@@ -350,17 +353,31 @@ CRON_SECRET=
 
 ---
 
+## Setup
+
+Copy the example env file and fill in your credentials before running the app or deploying:
+
+```bash
+cp .env.example .env.local
+```
+
+See `.env.example` for all required variables (WordPress OAuth, Moodle token, Zoom, Cal.com, VAPID keys, cron secrets). All variables are optional for local development — the app falls back to mock data when they are absent.
+
+---
+
 ## Deploy
 
-**Vercel (PWA):**
+**Vercel (Next.js PWA):**
 ```bash
 vercel --prod
 ```
 
-**Hetzner VPS (Moodle + Cal.com + Mautic + Nginx):**
+**Hetzner VPS (Moodle + WordPress + Cal.com + Mautic + Nginx):**
 ```bash
 docker compose up -d
 ```
+
+Docker Compose config, Nginx reverse proxy rules, Prometheus monitoring, and deploy automation scripts are in `infra/`. See `infra/scripts/` for first-time provisioning steps.
 
 ---
 

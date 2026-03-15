@@ -16,7 +16,8 @@ export async function GET() {
   const coursesWithProgress = await Promise.all(
     (courses as Array<{ id: number; fullname: string; progress?: number }>).map(async (course) => {
       const progress = await getCourseProgress(userId, String(course.id));
-      return { ...course, progress: progress?.completionpercentage ?? course.progress ?? 0 };
+      const pct = (progress as Record<string, unknown> | null)?.completionpercentage;
+      return { ...course, progress: typeof pct === "number" ? pct : (course.progress ?? 0) };
     })
   );
 

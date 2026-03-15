@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 const MOCK_BOOKINGS = [
   {
@@ -14,6 +15,11 @@ const MOCK_BOOKINGS = [
 ];
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const CAL_API_KEY = process.env.CAL_API_KEY;
 
   if (!CAL_API_KEY) {
@@ -28,7 +34,15 @@ export async function GET() {
       return NextResponse.json(MOCK_BOOKINGS);
     }
     const data = await res.json();
-    return NextResponse.json(data.bookings ?? MOCK_BOOKINGS);
+    const allBookings = data.bookings ?? MOCK_BOOKINGS;
+    // Filter to only return bookings where the session user is an attendee
+    const userEmail = session.user.email;
+    const userBookings = userEmail
+      ? allBookings.filter((booking: { attendees?: { email: string }[] }) =>
+          booking.attendees?.some((a) => a.email === userEmail)
+        )
+      : allBookings;
+    return NextResponse.json(userBookings);
   } catch {
     return NextResponse.json(MOCK_BOOKINGS);
   }

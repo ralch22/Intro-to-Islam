@@ -1,0 +1,393 @@
+# =============================================================================
+# IntroToIslam — Production Docker Compose Stack
+# Target: Hetzner CX32 VPS (4 vCPU, 8 GB RAM, 80 GB SSD)
+# All services share the iti-network bridge network.
+# Secrets and credentials are sourced from .env.hetzner (never commit that file).
+# =============================================================================
+
+version: "3.9"
+
+# ---------------------------------------------------------------------------
+# Named volumes — data survives container restarts and upgrades
+# ---------------------------------------------------------------------------
+volumes:
+  mysql_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  moodle_data:
+    driver: local
+  moodle_moodledata:
+    driver: local
+  wordpress_data:
+    driver: local
+  certbot_conf:
+    driver: local
+  certbot_www:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# Custom bridge network — all services communicate by container name
+# ---------------------------------------------------------------------------
+networks:
+  iti-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+
+  # --------------------------------------------------------------------------
+  # nginx — reverse proxy + SSL termination
+  # Handles: introtoislam.org, learn., lms., book. subdomains
+  # --------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: iti-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Main nginx config
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Virtual host configs per subdomain
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL certificates managed by certbot
+      - certbot_conf:/etc/letsencrypt:ro
+      # ACME http-01 challenge webroot
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - wordpress
+      - moodle
+      - calcom
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # certbot — Let's Encrypt SSL certificate automation
+  # Runs once to issue certs, then on a cron schedule (see scripts/renew-ssl.sh)
+  # --------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot
+    container_name: iti-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renew certificates every 12 hours; certbot is a no-op if not due yet
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+
+  # --------------------------------------------------------------------------
+  # wordpress — PHP-FPM backend for introtoislam.org main site
+  # nginx proxies PHP requests to this container via FastCGI
+  # --------------------------------------------------------------------------
+  wordpress:
+    image: wordpress:php8.2-fpm
+    container_name: iti-wordpress
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # mysql — MySQL 8 for WordPress
+  # --------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: iti-mysql
+    restart: unless-stopped
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # moodle — Bitnami Moodle LMS (lms.introtoislam.org)
+  # --------------------------------------------------------------------------
+  moodle:
+    image: bitnami/moodle:latest
+    container_name: iti-moodle
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - moodle_data:/bitnami/moodle
+      - moodle_moodledata:/bitnami/moodledata
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      # Database
+      MOODLE_DATABASE_TYPE: pgsql
+      MOODLE_DATABASE_HOST: postgres
+      MOODLE_DATABASE_PORT_NUMBER: 5432
+      MOODLE_DATABASE_NAME: ${MOODLE_DB_NAME}
+      MOODLE_DATABASE_USER: ${MOODLE_DB_USER}
+      MOODLE_DATABASE_PASSWORD: ${MOODLE_DB_PASSWORD}
+      # Admin account
+      MOODLE_USERNAME: ${MOODLE_ADMIN_USER}
+      MOODLE_PASSWORD: ${MOODLE_ADMIN_PASSWORD}
+      MOODLE_EMAIL: ${MOODLE_ADMIN_EMAIL}
+      MOODLE_SITE_NAME: "Intro to Islam — LMS"
+      # Site URL (must match nginx vhost)
+      MOODLE_HOST: lms.introtoislam.org
+      MOODLE_REVERSEPROXY: "true"
+      MOODLE_SSLPROXY: "true"
+      # Redis cache
+      MOODLE_CACHE_REDIS_HOST: redis
+      MOODLE_CACHE_REDIS_PORT: 6379
+    ports:
+      # Internal only; nginx proxies 443 → 8080
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login/index.php"]
+      interval: 60s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+
+  # --------------------------------------------------------------------------
+  # postgres — PostgreSQL 16 for Moodle and Cal.com
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: iti-postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      POSTGRES_DB: ${MOODLE_DB_NAME}
+      POSTGRES_USER: ${MOODLE_DB_USER}
+      POSTGRES_PASSWORD: ${MOODLE_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MOODLE_DB_USER} -d ${MOODLE_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # redis — Redis 7 for session caching (Moodle, Next.js, Cal.com)
+  # Requires password auth via requirepass directive
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: iti-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+    volumes:
+      - redis_data:/data
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # calcom — Cal.com scheduling (book.introtoislam.org)
+  # --------------------------------------------------------------------------
+  calcom:
+    image: calcom/cal.com:latest
+    container_name: iti-calcom
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      DATABASE_URL: postgresql://${CALCOM_DB_USER}:${CALCOM_DB_PASSWORD}@postgres:5432/${CALCOM_DB_NAME}
+      NEXTAUTH_SECRET: ${CALCOM_NEXTAUTH_SECRET}
+      NEXTAUTH_URL: https://book.introtoislam.org
+      NEXT_PUBLIC_WEBAPP_URL: https://book.introtoislam.org
+      NEXT_PUBLIC_LICENSE_CONSENT: "agree"
+      CALCOM_LICENSE_KEY: ${CALCOM_LICENSE_KEY}
+      EMAIL_FROM: ${CALCOM_EMAIL_FROM}
+      EMAIL_SERVER_HOST: ${SMTP_HOST}
+      EMAIL_SERVER_PORT: ${SMTP_PORT}
+      EMAIL_SERVER_USER: ${SMTP_USER}
+      EMAIL_SERVER_PASSWORD: ${SMTP_PASSWORD}
+    ports:
+      - "127.0.0.1:3001:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # --------------------------------------------------------------------------
+  # mautic — Marketing automation (email campaigns, lead nurturing)
+  # --------------------------------------------------------------------------
+  mautic:
+    image: mautic/mautic:latest
+    container_name: iti-mautic
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./mautic/config:/var/www/html/app/config
+      - ./mautic/logs:/var/www/html/app/logs
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      MAUTIC_DB_HOST: mysql
+      MAUTIC_DB_PORT: 3306
+      MAUTIC_DB_NAME: ${MAUTIC_DB_NAME}
+      MAUTIC_DB_USER: ${MAUTIC_DB_USER}
+      MAUTIC_DB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+      MAUTIC_ADMIN_USERNAME: ${MAUTIC_ADMIN_USER}
+      MAUTIC_ADMIN_PASSWORD: ${MAUTIC_ADMIN_PASSWORD}
+      MAUTIC_ADMIN_EMAIL: ${MAUTIC_ADMIN_EMAIL}
+      MAUTIC_SITE_URL: https://mautic.introtoislam.org
+    ports:
+      - "127.0.0.1:8081:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/mtc.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # prometheus — metrics collection and storage
+  # Scrapes node-exporter, nginx, and application endpoints
+  # --------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: iti-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      # Retain metrics for 30 days
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # grafana — dashboards for infrastructure and application metrics
+  # Access at https://metrics.introtoislam.org (via nginx proxy) or :3000 locally
+  # --------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: iti-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - iti-network
+    env_file:
+      - .env.hetzner
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: https://metrics.introtoislam.org
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: ${SMTP_HOST}:${SMTP_PORT}
+      GF_SMTP_USER: ${SMTP_USER}
+      GF_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GF_SMTP_FROM_ADDRESS: ${GRAFANA_EMAIL_FROM}
+    ports:
+      - "127.0.0.1:3002:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3

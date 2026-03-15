@@ -39,9 +39,6 @@ const communityActivity = [
   { user: "Omar K.", action: "shared a resource in", channel: "General Discussion", ago: "5 hours ago" },
 ];
 
-const FALLBACK_MODULE_TITLE = "Module 2: Core Beliefs";
-const NEXT_LESSON_ID = "2-1";
-
 function formatMeetingDate(iso: string) {
   const d = new Date(iso);
   return {
@@ -144,13 +141,25 @@ export default function DashboardPage() {
   const nextMeeting = data?.nextMeeting;
   const meetingDate = nextMeeting ? formatMeetingDate(nextMeeting.start_time) : null;
 
-  // Static modules list (uses real course id from API when available)
-  const courseIdStr = currentCourse ? String(currentCourse.id) : "2";
-  const modules = [
-    { id: "1", title: "Module 1: Introduction", status: "completed", note: "Completed" },
-    { id: "2", title: "Module 2: Core Beliefs", status: "active", note: `In Progress • ${currentCourse?.progress ?? 75}%` },
-    { id: "3", title: "Module 3: Daily Practices", status: "locked", note: "Complete Module 2 to unlock" },
-  ];
+  // Derive next lesson from first course that is not yet complete
+  const nextCourse = data?.courses?.find((c) => c.progress < 100) ?? data?.courses?.[0];
+  const nextLessonId = nextCourse ? `${nextCourse.id}-1` : null;
+
+  // Build modules list from real API courses data
+  const courseIdStr = currentCourse ? String(currentCourse.id) : "";
+  const modules = (data?.courses ?? []).map((course, index) => {
+    const isComplete = course.progress >= 100;
+    const isActive = !isComplete && course.id === nextCourse?.id;
+    const isPreviousDone = index === 0 || (data?.courses?.[index - 1]?.progress ?? 0) >= 100;
+    const isLocked = !isComplete && !isActive && !isPreviousDone;
+    const status = isComplete ? "completed" : isActive ? "active" : isLocked ? "locked" : "active";
+    const note = isComplete
+      ? "Completed"
+      : isLocked
+      ? `Complete previous module to unlock`
+      : `In Progress \u2022 ${course.progress ?? 0}%`;
+    return { id: String(course.id), title: course.fullname, status, note };
+  });
 
   return (
     <main>
@@ -183,7 +192,7 @@ export default function DashboardPage() {
                       Current Course
                     </span>
                     <h3 className="text-xl font-bold text-gray-900">{currentCourse.fullname}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{FALLBACK_MODULE_TITLE}</p>
+                    <p className="text-sm text-gray-500 mt-1">{currentCourse.shortname}</p>
                   </div>
                   <ProgressRing progress={currentCourse.progress} />
                 </div>
@@ -199,12 +208,21 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <Link
-                  href={`/courses/${currentCourse.id}/lesson/${NEXT_LESSON_ID}`}
-                  className="w-full bg-[#E81C74] hover:bg-pink-600 text-white font-medium py-4 px-4 rounded-full transition-colors flex justify-center items-center gap-2 shadow-lg"
-                >
-                  Continue Lesson →
-                </Link>
+                {nextLessonId ? (
+                  <Link
+                    href={`/courses/${nextCourse!.id}/lesson/${nextLessonId}`}
+                    className="w-full bg-[#E81C74] hover:bg-pink-600 text-white font-medium py-4 px-4 rounded-full transition-colors flex justify-center items-center gap-2 shadow-lg"
+                  >
+                    Continue Lesson →
+                  </Link>
+                ) : (
+                  <Link
+                    href="/courses"
+                    className="w-full bg-[#E81C74] hover:bg-pink-600 text-white font-medium py-4 px-4 rounded-full transition-colors flex justify-center items-center gap-2 shadow-lg"
+                  >
+                    Browse Courses →
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="w-full max-w-md lg:max-w-[450px] glass-card rounded-2xl p-5 md:p-8 text-gray-800">

@@ -1,15 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export function usePushNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [permission, setPermission] = useState<NotificationPermission>(
+    () => typeof Notification !== "undefined" ? Notification.permission : "default"
+  );
   const [subscribed, setSubscribed] = useState(false);
-
-  useEffect(() => {
-    if (typeof Notification !== "undefined") {
-      setPermission(Notification.permission);
-    }
-  }, []);
 
   async function subscribe() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;

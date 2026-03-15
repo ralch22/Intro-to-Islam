@@ -3,7 +3,10 @@ import { getCourses, getCourseLessons } from "@/lib/moodle";
 import { auth } from "@/lib/auth";
 
 export async function GET() {
-  await auth();
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const courses = (await getCourses()) as Array<{
     id: number;
     fullname: string;

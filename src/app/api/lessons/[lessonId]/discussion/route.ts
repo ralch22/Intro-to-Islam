@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 const MOCK_POSTS = [
   { id: "1", author: "Omar K.", avatar: "O", content: "JazakAllah khair for this lesson! The explanation of Tawheed was very clear.", timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
@@ -10,6 +11,10 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ lessonId: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const { lessonId: _lessonId } = await params;
   return NextResponse.json(MOCK_POSTS);
 }
@@ -18,6 +23,10 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ lessonId: string }> }
 ) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const { lessonId: _lessonId } = await params;
   const { content } = await req.json() as { content: string };
   const post = { id: String(Date.now()), author: "You", avatar: "Y", content, timestamp: new Date().toISOString() };

@@ -1,0 +1,137 @@
+# =============================================================================
+# Prometheus — Scrape Configuration
+# IntroToIslam Hetzner VPS
+# =============================================================================
+# Metrics are retained for 30 days (set via --storage.tsdb.retention.time=30d
+# in the docker-compose command block).
+# Alertmanager integration: add your alertmanager address under `alerting`
+# when you set up PagerDuty / Slack notifications.
+# =============================================================================
+
+global:
+  # How frequently to scrape targets by default
+  scrape_interval: 15s
+  # How frequently to evaluate alerting rules
+  evaluation_interval: 15s
+  # Attach these labels to all time series collected by this instance
+  external_labels:
+    environment: "production"
+    project:     "intro-to-islam"
+    vps:         "hetzner-cx32"
+
+# ---------------------------------------------------------------------------
+# Alertmanager (uncomment and configure when ready)
+# ---------------------------------------------------------------------------
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# ---------------------------------------------------------------------------
+# Alert rules (create additional .yml files in this directory)
+# ---------------------------------------------------------------------------
+rule_files:
+  - "alert_rules.yml"
+
+# ---------------------------------------------------------------------------
+# Scrape targets
+# ---------------------------------------------------------------------------
+scrape_configs:
+
+  # ---------- Prometheus self-monitoring -------------------------------------
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+    metrics_path: /metrics
+    scrape_interval: 30s
+
+  # ---------- Node Exporter — host-level OS/hardware metrics ----------------
+  # Install on the VPS host (not inside Docker) for accurate disk/CPU data:
+  #   apt install prometheus-node-exporter
+  # or run as a Docker container with host network mode.
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["host.docker.internal:9100"]
+        labels:
+          instance: "hetzner-cx32"
+    scrape_interval: 15s
+
+  # ---------- nginx — request rate, latency, status codes ------------------
+  # Requires nginx-prometheus-exporter sidecar or ngx_http_stub_status_module
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+        labels:
+          service: "nginx"
+    scrape_interval: 15s
+
+  # ---------- MySQL — WordPress database metrics ----------------------------
+  # Requires mysqld_exporter container (add to docker-compose if needed)
+  - job_name: "mysql"
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+        labels:
+          service: "mysql"
+          database: "wordpress"
+    scrape_interval: 30s
+
+  # ---------- PostgreSQL — Moodle + Cal.com database metrics ----------------
+  # Requires postgres_exporter container
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          service: "postgres"
+    scrape_interval: 30s
+
+  # ---------- Redis — cache hit rate, memory, connections ------------------
+  # Requires redis_exporter container
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+        labels:
+          service: "redis"
+    scrape_interval: 15s
+
+  # ---------- Next.js PWA — custom application metrics ----------------------
+  # The Next.js app should expose /api/metrics (use prom-client package)
+  - job_name: "nextjs-pwa"
+    static_configs:
+      - targets: ["intro-to-islam-pwa.vercel.app:443"]
+        labels:
+          service: "nextjs-pwa"
+          environment: "vercel"
+    scheme: https
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+    tls_config:
+      insecure_skip_verify: false
+
+  # ---------- Moodle — application health endpoint -------------------------
+  # Moodle does not expose Prometheus natively; use a health check endpoint
+  - job_name: "moodle"
+    static_configs:
+      - targets: ["moodle:8080"]
+        labels:
+          service: "moodle"
+    metrics_path: /local/prometheus/metrics.php
+    scrape_interval: 60s
+
+  # ---------- Cal.com — application metrics ---------------------------------
+  - job_name: "calcom"
+    static_configs:
+      - targets: ["calcom:3000"]
+        labels:
+          service: "calcom"
+    metrics_path: /api/metrics
+    scrape_interval: 30s
+
+  # ---------- Grafana — self-monitoring ------------------------------------
+  - job_name: "grafana"
+    static_configs:
+      - targets: ["grafana:3000"]
+        labels:
+          service: "grafana"
+    metrics_path: /metrics
+    scrape_interval: 30s

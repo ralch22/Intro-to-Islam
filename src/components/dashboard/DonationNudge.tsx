@@ -1,22 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const NUDGE_KEY = "iti_donation_nudge_dismissed";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function DonationNudge() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
+  const [visible, setVisible] = useState(() => {
     try {
       const dismissed = localStorage.getItem(NUDGE_KEY);
-      if (!dismissed || Date.now() - Number(dismissed) > WEEK_MS) {
-        setVisible(true);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+      return !dismissed || Date.now() - Number(dismissed) > WEEK_MS;
+    } catch { return false; }
+  });
 
   function dismiss() {
     try {

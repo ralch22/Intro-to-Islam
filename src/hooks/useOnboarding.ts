@@ -1,13 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export function useOnboarding() {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    const done = localStorage.getItem("iti_onboarding_done");
-    if (!done) setShowOnboarding(true);
-  }, []);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try { return !localStorage.getItem("iti_onboarding_done"); } catch { return false; }
+  });
 
   const completeOnboarding = () => {
     localStorage.setItem("iti_onboarding_done", "true");

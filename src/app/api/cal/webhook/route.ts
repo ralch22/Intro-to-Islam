@@ -8,14 +8,15 @@ export async function POST(req: Request) {
   // Validate HMAC signature if secret is configured
   if (secret) {
     const signature = req.headers.get("x-cal-signature-256");
-    if (signature) {
-      const expected = crypto
-        .createHmac("sha256", secret)
-        .update(body)
-        .digest("hex");
-      if (signature !== expected) {
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-      }
+    if (!signature) {
+      return NextResponse.json({ error: "Signature required" }, { status: 401 });
+    }
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(body)
+      .digest("hex");
+    if (signature !== expected) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   }
 

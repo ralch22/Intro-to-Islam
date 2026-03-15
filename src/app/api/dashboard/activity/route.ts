@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 const MOCK_ACTIVITY = [
   { id: "1", type: "lesson_complete", description: "Completed: The Five Pillars", courseId: "2", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
@@ -9,6 +10,10 @@ const MOCK_ACTIVITY = [
 ];
 
 export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   // Filter out events older than 90 days
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const recent = MOCK_ACTIVITY.filter(a => new Date(a.timestamp) > cutoff).slice(0, 5);

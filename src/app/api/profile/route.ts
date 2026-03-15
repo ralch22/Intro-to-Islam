@@ -29,6 +29,10 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const body = (await req.json()) as Record<string, unknown>;
   // In production: update Moodle + WordPress profile
   return NextResponse.json({ success: true, updated: body });

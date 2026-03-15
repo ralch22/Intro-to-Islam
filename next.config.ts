@@ -49,6 +49,10 @@ export default withPWA({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
+  swSrc: "worker/index.ts",
+  fallbacks: {
+    document: "/offline",
+  },
   runtimeCaching: [
     {
       urlPattern: /\/api\/courses/,

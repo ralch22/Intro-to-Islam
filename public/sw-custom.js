@@ -1,3 +1,7 @@
+// NOTE: This file is superseded by worker/index.ts (Sprint 5 / S5-5).
+// It is kept for reference but is not executed as a service worker.
+// The active custom SW logic lives in worker/index.ts, bundled by next-pwa.
+
 // Custom Service Worker additions (loaded alongside next-pwa generated SW)
 
 // Push notification handler
@@ -12,8 +16,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-72x72.png",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-72.png",
       data: { url: data.url ?? "/" },
     })
   );

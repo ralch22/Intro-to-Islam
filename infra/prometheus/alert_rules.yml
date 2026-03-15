@@ -1,0 +1,150 @@
+# =============================================================================
+# Prometheus Alert Rules — IntroToIslam
+# =============================================================================
+# These rules evaluate every 15 seconds (global.evaluation_interval).
+# Firing alerts are forwarded to Alertmanager (configure alerting block in
+# prometheus.yml when Alertmanager is deployed).
+# =============================================================================
+
+groups:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure — host-level alerts
+  # ---------------------------------------------------------------------------
+  - name: infrastructure
+    rules:
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ printf \"%.1f\" $value }}% for more than 5 minutes."
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ printf \"%.1f\" $value }}% — service degradation likely."
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ printf \"%.1f\" $value }}%."
+
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Root filesystem is {{ printf \"%.1f\" $value }}% full."
+
+      - alert: DiskSpaceCritical
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 90
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critical on {{ $labels.instance }}"
+          description: "Root filesystem is {{ printf \"%.1f\" $value }}% full — immediate action required."
+
+  # ---------------------------------------------------------------------------
+  # Application — service health
+  # ---------------------------------------------------------------------------
+  - name: application
+    rules:
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Target {{ $labels.instance }} has been unreachable for 1 minute."
+
+      - alert: HighErrorRate
+        expr: rate(nginx_http_requests_total{status=~"5.."}[5m]) / rate(nginx_http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx error rate"
+          description: "{{ printf \"%.1f\" $value | humanizePercentage }} of nginx requests are errors."
+
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(nginx_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response times detected"
+          description: "95th percentile response time is {{ printf \"%.2f\" $value }}s."
+
+  # ---------------------------------------------------------------------------
+  # Database — MySQL and PostgreSQL health
+  # ---------------------------------------------------------------------------
+  - name: database
+    rules:
+
+      - alert: MySQLDown
+        expr: mysql_up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL is down"
+          description: "MySQL has been unreachable for 30 seconds — WordPress will be unavailable."
+
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been unreachable for 30 seconds — Moodle and Cal.com will be unavailable."
+
+      - alert: HighDatabaseConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL connection pool near limit"
+          description: "{{ printf \"%.0f\" $value | humanizePercentage }} of max MySQL connections in use."
+
+  # ---------------------------------------------------------------------------
+  # Redis — cache health
+  # ---------------------------------------------------------------------------
+  - name: redis
+    rules:
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for 30 seconds — Moodle caching will degrade."
+
+      - alert: RedisHighMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis is using {{ printf \"%.1f\" $value | humanizePercentage }} of its max memory."

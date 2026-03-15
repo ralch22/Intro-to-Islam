@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 type Preferences = {
@@ -43,19 +43,13 @@ function Toggle({
 
 export default function NotificationsPage() {
   const { permission, subscribed, requestAndSubscribe } = usePushNotifications();
-  const [prefs, setPrefs] = useState<Preferences>(defaultPrefs);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
+  const [prefs, setPrefs] = useState<Preferences>(() => {
     try {
       const stored = localStorage.getItem(PREF_KEY);
-      if (stored) {
-        setPrefs(JSON.parse(stored) as Preferences);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
+      return stored ? (JSON.parse(stored) as Preferences) : defaultPrefs;
+    } catch { return defaultPrefs; }
+  });
+  const [saved, setSaved] = useState(false);
 
   function updatePref(key: keyof Preferences, value: boolean) {
     const updated = { ...prefs, [key]: value };

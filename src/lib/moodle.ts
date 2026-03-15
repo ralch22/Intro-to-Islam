@@ -56,17 +56,48 @@ const MOCK_MODULES = [
   { id: "3", courseId: "3", title: "Module 3: Battles & Legacy", order: 3, completed: false },
 ];
 
-export async function moodleRequest(wsfunction: string, params: Record<string, string> = {}) {
-  if (!MOODLE_URL || !MOODLE_TOKEN) {
-    return null; // caller handles null → use mock
+async function moodleRequest(wsfunction: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  if (!MOODLE_URL || !MOODLE_TOKEN) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`);
+    url.searchParams.set("wstoken", MOODLE_TOKEN);
+    url.searchParams.set("wsfunction", wsfunction);
+    url.searchParams.set("moodlewsrestformat", "json");
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
+
+    const res = await fetch(url.toString(), {
+      next: { revalidate: 300 },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      console.error("[Moodle] HTTP error", { wsfunction, status: res.status, statusText: res.statusText });
+      return null;
+    }
+
+    const data = await res.json();
+
+    // Moodle returns errors as { exception: string, message: string }
+    if (data && typeof data === "object" && "exception" in data) {
+      console.error("[Moodle] API error", { wsfunction, exception: (data as Record<string, unknown>).exception, message: (data as Record<string, unknown>).message });
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      console.error("[Moodle] Request timeout", { wsfunction });
+    } else {
+      console.error("[Moodle] Fetch error", { wsfunction, error: (err as Error).message });
+    }
+    return null;
+  } finally {
+    clearTimeout(timeout);
   }
-  const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`);
-  url.searchParams.set("wstoken", MOODLE_TOKEN);
-  url.searchParams.set("wsfunction", wsfunction);
-  url.searchParams.set("moodlewsrestformat", "json");
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), { next: { revalidate: 300 } });
-  return res.json();
 }
 
 export async function getCourses() {
@@ -76,7 +107,7 @@ export async function getCourses() {
 
 export async function getCourseById(id: string) {
   const data = await moodleRequest("core_course_get_courses", { "options[ids][0]": id });
-  return (data?.[0]) ?? MOCK_COURSES.find(c => String(c.id) === id) ?? MOCK_COURSES[0];
+  return ((data as Array<unknown>)?.[0]) ?? MOCK_COURSES.find(c => String(c.id) === id) ?? MOCK_COURSES[0];
 }
 
 export async function getCourseLessons(courseId: string) {
@@ -105,8 +136,26 @@ export async function getLessonById(lessonId: string) {
   return (lessons as typeof MOCK_LESSONS).find(l => l.id === lessonId) ?? MOCK_LESSONS[0];
 }
 
-export async function getModulesByCourse(courseId: string) {
-  return MOCK_MODULES.filter(m => m.courseId === courseId);
+export async function getModulesByCourse(courseId: string | number): Promise<MoodleModule[]> {
+  const data = await moodleRequest("core_course_get_contents", { courseid: courseId });
+
+  if (!data || !Array.isArray(data)) {
+    // Fall back to mock when Moodle not configured or error
+    return MOCK_MODULES.filter(m => String(m.courseId) === String(courseId));
+  }
+
+  // data is an array of sections; each section has a 'modules' array.
+  // MoodleModule shape (inferred from MOCK_MODULES): id, courseId, title, order, completed
+  const modules: MoodleModule[] = (data as Array<{ id: number; name: string; modules?: unknown[] }>)
+    .map((section, idx) => ({
+      id: String(section.id),
+      courseId: String(courseId),
+      title: section.name || `Module ${idx + 1}`,
+      order: idx + 1,
+      completed: false,
+    }));
+
+  return modules.length > 0 ? modules : MOCK_MODULES.filter(m => String(m.courseId) === String(courseId));
 }
 
 export async function getCourseProgress(userId: string, courseId: string) {
@@ -136,14 +185,35 @@ export async function enrollUser(userId: string, courseId: string) {
   });
 }
 
-export async function linkVideoToLesson(courseId: string, sectionId: string, youtubeVideoId: string, title: string) {
+export async function linkVideoToLesson(
+  courseId: string | number,
+  sectionId: string | number,
+  youtubeUrl: string,
+  title: string
+): Promise<{ status: string }> {
+  // NOTE: Creating a URL resource in Moodle via REST API requires the following:
+  // 1. A Moodle web service token with 'mod/url:addinstance' capability
+  // 2. The section number (not section ID) for the target section
+  // Moodle does not expose a direct 'create URL module' REST function in standard web services.
+  // The recommended approach is either:
+  //   a) Use Moodle's course module creation via its internal API (requires custom web service plugin)
+  //   b) Use Moodle's assignment/page/url module endpoints if available in your Moodle version
+  // TODO(sprint-6): Implement via Moodle admin REST endpoint or custom web service plugin
+
   if (!MOODLE_URL || !MOODLE_TOKEN) {
     return { status: "mock_linked" };
   }
-  return moodleRequest("core_course_add_content_item_to_user_favourites", {
-    componentname: "mod_url",
-    contentitemid: sectionId,
+
+  // Best-effort: log the video link for manual admin action until custom WS plugin is available
+  console.log("[Moodle] linkVideoToLesson — manual action required", {
+    courseId,
+    sectionId,
+    youtubeUrl,
+    title,
+    note: "Automatic URL module creation requires custom Moodle web service plugin. Link this video manually in Moodle admin.",
   });
+
+  return { status: "logged_for_manual_action" };
 }
 
 export type MoodleCourse = typeof MOCK_COURSES[0];

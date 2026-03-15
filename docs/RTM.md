@@ -1,8 +1,8 @@
 # Requirements Traceability Matrix
 **IntroToIslam.org — Student Learning Portal (PWA)**
 
-> **Document:** RTM-ITI-2026-001 · **Version:** 1.0 · **Date:** 11 March 2026
-> **Status:** Baselined — Approved for Development
+> **Document:** RTM-ITI-2026-001 · **Version:** 1.1 · **Date:** 16 March 2026
+> **Status:** In Progress — Sprint 5 complete; 39/65 test cases verified
 > **SRS Ref:** SRS-ITI-2026-001 · **PRD Ref:** PRD-ITI-2026-001 · **Arch Ref:** ARCH-ITI-2026-001
 
 ---
@@ -40,23 +40,23 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Feature Area | Total | Must | Should | Could | Test Cases | Status |
 |-------------|-------|------|--------|-------|-----------|--------|
-| Authentication & Profile (FR-AUTH) | 5 | 3 | 1 | 1 | TC-AUTH-001–005 | Not Started |
-| Onboarding (FR-ONBOARD) | 2 | 2 | 0 | 0 | TC-ONBOARD-001–002 | Not Started |
-| Dashboard (FR-DASH) | 4 | 2 | 1 | 1 | TC-DASH-001–004 | Not Started |
-| Course Catalogue (FR-CATALOG) | 4 | 3 | 1 | 0 | TC-CATALOG-001–004 | Not Started |
-| Course Study (FR-STUDY) | 6 | 3 | 2 | 1 | TC-STUDY-001–006 | Not Started |
-| Live Classes (FR-LIVE) | 5 | 4 | 1 | 0 | TC-LIVE-001–005 | Not Started |
-| Consultations (FR-CONSULT) | 5 | 3 | 2 | 0 | TC-CONSULT-001–005 | Not Started |
+| Authentication & Profile (FR-AUTH) | 5 | 3 | 1 | 1 | TC-AUTH-001–005 | Complete |
+| Onboarding (FR-ONBOARD) | 2 | 2 | 0 | 0 | TC-ONBOARD-001–002 | Complete |
+| Dashboard (FR-DASH) | 4 | 2 | 1 | 1 | TC-DASH-001–004 | Complete |
+| Course Catalogue (FR-CATALOG) | 4 | 3 | 1 | 0 | TC-CATALOG-001–004 | Complete |
+| Course Study (FR-STUDY) | 6 | 3 | 2 | 1 | TC-STUDY-001–006 | Complete |
+| Live Classes (FR-LIVE) | 5 | 4 | 1 | 0 | TC-LIVE-001–005 | In Progress |
+| Consultations (FR-CONSULT) | 5 | 3 | 2 | 0 | TC-CONSULT-001–005 | In Progress |
 | Offline & PWA (FR-OFFLINE) | 4 | 2 | 2 | 0 | TC-OFFLINE-001–004 | Not Started |
-| Push Notifications (FR-NOTIF) | 4 | 2 | 2 | 0 | TC-NOTIF-001–004 | Not Started |
-| Progress & Achievements (FR-PROG) | 4 | 1 | 1 | 2 | TC-PROG-001–004 | Not Started |
-| Performance (NFR-PERF) | 5 | — | — | — | TC-PERF-001–005 | Not Started |
-| Security (NFR-SEC) | 6 | — | — | — | TC-SEC-001–006 | Not Started |
-| Availability (NFR-AVAIL) | 3 | — | — | — | TC-AVAIL-001–003 | Not Started |
+| Push Notifications (FR-NOTIF) | 4 | 2 | 2 | 0 | TC-NOTIF-001–004 | Complete |
+| Progress & Achievements (FR-PROG) | 4 | 1 | 1 | 2 | TC-PROG-001–004 | In Progress |
+| Performance (NFR-PERF) | 5 | — | — | — | TC-PERF-001–005 | In Progress |
+| Security (NFR-SEC) | 6 | — | — | — | TC-SEC-001–006 | In Progress |
+| Availability (NFR-AVAIL) | 3 | — | — | — | TC-AVAIL-001–003 | In Progress |
 | Accessibility (NFR-ACCESS) | 3 | — | — | — | TC-ACCESS-001–003 | Not Started |
-| PWA Compliance (NFR-PWA) | 3 | — | — | — | TC-PWA-001–003 | Not Started |
+| PWA Compliance (NFR-PWA) | 3 | — | — | — | TC-PWA-001–003 | Complete |
 | Scalability (NFR-SCALE) | 2 | — | — | — | TC-SCALE-001–002 | Not Started |
-| **TOTAL** | **65** | **25** | **13** | **5** | **65 Test Cases** | **Not Started** |
+| **TOTAL** | **65** | **25** | **13** | **5** | **65 Test Cases** | **39 Complete · 4 Deferred · 22 Not Started** |
 
 ---
 
@@ -66,55 +66,55 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-AUTH-001 | WordPress OAuth2 SSO — redirect, code exchange, JWT session | F1-1 | WordPress + WP OAuth Server | TC-AUTH-001 | Integration Test | Must | Not Started |
-| FR-AUTH-002 | 15-min JWT + 30-day refresh in HttpOnly cookie; silent refresh | F1-4 | Next.js PWA + Redis | TC-AUTH-002 | Functional Test | Must | Not Started |
-| FR-AUTH-003 | Logout: revoke refresh token, clear cookies + Zustand state | F1-4 | Next.js PWA + Redis | TC-AUTH-003 | Functional Test | Must | Not Started |
-| FR-AUTH-004 | Profile page: display name, avatar, enrolled count, lessons, join date | F1-1 | Next.js PWA + Moodle LMS | TC-AUTH-004 | Functional Test | Should | Not Started |
-| FR-AUTH-005 | Google OAuth alternative login; merge by email match | PRD F1 | WordPress + Google OAuth | TC-AUTH-005 | Integration Test | Could | Not Started |
+| FR-AUTH-001 | WordPress OAuth2 SSO — redirect, code exchange, JWT session | F1-1 | WordPress + WP OAuth Server | TC-AUTH-001 | Integration Test | Must | Complete |
+| FR-AUTH-002 | 15-min JWT + 30-day refresh in HttpOnly cookie; silent refresh | F1-4 | Next.js PWA + Redis | TC-AUTH-002 | Functional Test | Must | Complete |
+| FR-AUTH-003 | Logout: revoke refresh token, clear cookies + Zustand state | F1-4 | Next.js PWA + Redis | TC-AUTH-003 | Functional Test | Must | Complete |
+| FR-AUTH-004 | Profile page: display name, avatar, enrolled count, lessons, join date | F1-1 | Next.js PWA + Moodle LMS | TC-AUTH-004 | Functional Test | Should | Complete |
+| FR-AUTH-005 | Google OAuth alternative login; merge by email match | PRD F1 | WordPress + Google OAuth | TC-AUTH-005 | Integration Test | Could | Complete |
 
 ### Onboarding (FR-ONBOARD)
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-ONBOARD-001 | 3-screen value-prop carousel on first launch; dismissed after Login | F1-2 | Next.js PWA | TC-ONBOARD-001 | Functional Test | Must | Not Started |
-| FR-ONBOARD-002 | A2HS prompt on 2nd authenticated session (Android/Desktop); iOS overlay | F1-3 | Service Worker + Web App Manifest | TC-ONBOARD-002 | Manual Inspection | Must | Not Started |
+| FR-ONBOARD-001 | 3-screen value-prop carousel on first launch; dismissed after Login | F1-2 | Next.js PWA | TC-ONBOARD-001 | Functional Test | Must | Complete |
+| FR-ONBOARD-002 | A2HS prompt on 2nd authenticated session (Android/Desktop); iOS overlay | F1-3 | Service Worker + Web App Manifest | TC-ONBOARD-002 | Manual Inspection | Must | Complete |
 
 ### Dashboard (FR-DASH)
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-DASH-001 | Course progress cards: title, lesson, %, Continue button | F2-1 | Next.js PWA + Moodle LMS | TC-DASH-001 | Functional Test | Must | Not Started |
-| FR-DASH-002 | Next live class: title, cohort, local time, countdown, Join (active 30 min before) | F2-2 | Next.js PWA + Zoom API v2 | TC-DASH-002 | Functional Test | Must | Not Started |
-| FR-DASH-003 | Recent activity feed: last 5 events with relative timestamps | F2-3 | Next.js PWA + Moodle LMS | TC-DASH-003 | Functional Test | Should | Not Started |
-| FR-DASH-004 | Collapsible donation nudge once/week; dismissal persists 7 days | F2-4 | Next.js PWA + WooCommerce | TC-DASH-004 | Functional Test | Could | Not Started |
+| FR-DASH-001 | Course progress cards: title, lesson, %, Continue button | F2-1 | Next.js PWA + Moodle LMS | TC-DASH-001 | Functional Test | Must | Complete |
+| FR-DASH-002 | Next live class: title, cohort, local time, countdown, Join (active 30 min before) | F2-2 | Next.js PWA + Zoom API v2 | TC-DASH-002 | Functional Test | Must | Complete |
+| FR-DASH-003 | Recent activity feed: last 5 events with relative timestamps | F2-3 | Next.js PWA + Moodle LMS | TC-DASH-003 | Functional Test | Should | Complete |
+| FR-DASH-004 | Collapsible donation nudge once/week; dismissal persists 7 days | F2-4 | Next.js PWA + WooCommerce | TC-DASH-004 | Functional Test | Could | Complete |
 
 ### Course Catalogue & Enrolment (FR-CATALOG)
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-CATALOG-001 | Course catalogue: thumbnail, title, description, lessons, hours, enrolment status | F2-1 | Next.js PWA + Moodle LMS | TC-CATALOG-001 | Functional Test | Must | Not Started |
-| FR-CATALOG-002 | Course detail: full description, module/lesson list, instructor, Enrol button | F2-1 | Next.js PWA + Moodle LMS | TC-CATALOG-002 | Functional Test | Must | Not Started |
-| FR-CATALOG-003 | Free zero-cost enrolment via Moodle self-enrol REST; no payment gateway | F2-1 | Next.js PWA + Moodle LMS | TC-CATALOG-003 | Integration Test | Must | Not Started |
-| FR-CATALOG-004 | Daily sync of YouTube playlist metadata to Moodle via cron + YouTube Data API | PRD F3 | YouTube Data API v3 + Moodle | TC-CATALOG-004 | Integration Test | Should | Not Started |
+| FR-CATALOG-001 | Course catalogue: thumbnail, title, description, lessons, hours, enrolment status | F2-1 | Next.js PWA + Moodle LMS | TC-CATALOG-001 | Functional Test | Must | Complete |
+| FR-CATALOG-002 | Course detail: full description, module/lesson list, instructor, Enrol button | F2-1 | Next.js PWA + Moodle LMS | TC-CATALOG-002 | Functional Test | Must | Complete |
+| FR-CATALOG-003 | Free zero-cost enrolment via Moodle self-enrol REST; no payment gateway | F2-1 | Next.js PWA + Moodle LMS | TC-CATALOG-003 | Integration Test | Must | Complete |
+| FR-CATALOG-004 | Daily sync of YouTube playlist metadata to Moodle via cron + YouTube Data API | PRD F3 | YouTube Data API v3 + Moodle | TC-CATALOG-004 | Integration Test | Should | Complete |
 
 ### Course Study Experience (FR-STUDY)
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-STUDY-001 | YouTube iframe API: inline playback, `rel=0`, `modestbranding=1` | F3-1 | Next.js PWA + YouTube iframe API | TC-STUDY-001 | Functional Test | Must | Not Started |
-| FR-STUDY-002 | Mark as Complete: calls Moodle completion API; progress bar updates without reload | F3-2 | Next.js PWA + Moodle LMS | TC-STUDY-002 | Functional Test | Must | Not Started |
-| FR-STUDY-003 | Prev/Next buttons + desktop keyboard ← → navigation | F3-3 | Next.js PWA + Moodle LMS | TC-STUDY-003 | Functional Test | Must | Not Started |
-| FR-STUDY-004 | Lesson notes tab: instructor-authored Moodle page resource | F3-4 | Next.js PWA + Moodle LMS | TC-STUDY-004 | Functional Test | Should | Not Started |
-| FR-STUDY-005 | Discussion tab per lesson: Moodle forum thread; student can post in-app | F3-5 | Next.js PWA + Moodle LMS | TC-STUDY-005 | Integration Test | Should | Not Started |
-| FR-STUDY-006 | Playback resume: YouTube Player API saves/restores position in localStorage | F3-6 | Next.js PWA + YouTube iframe API | TC-STUDY-006 | Functional Test | Could | Not Started |
+| FR-STUDY-001 | YouTube iframe API: inline playback, `rel=0`, `modestbranding=1` | F3-1 | Next.js PWA + YouTube iframe API | TC-STUDY-001 | Functional Test | Must | Complete |
+| FR-STUDY-002 | Mark as Complete: calls Moodle completion API; progress bar updates without reload | F3-2 | Next.js PWA + Moodle LMS | TC-STUDY-002 | Functional Test | Must | Complete |
+| FR-STUDY-003 | Prev/Next buttons + desktop keyboard ← → navigation | F3-3 | Next.js PWA + Moodle LMS | TC-STUDY-003 | Functional Test | Must | Complete |
+| FR-STUDY-004 | Lesson notes tab: instructor-authored Moodle page resource | F3-4 | Next.js PWA + Moodle LMS | TC-STUDY-004 | Functional Test | Should | Complete |
+| FR-STUDY-005 | Discussion tab per lesson: Moodle forum thread; student can post in-app | F3-5 | Next.js PWA + Moodle LMS | TC-STUDY-005 | Integration Test | Should | Complete |
+| FR-STUDY-006 | Playback resume: YouTube Player API saves/restores position in localStorage | F3-6 | Next.js PWA + YouTube iframe API | TC-STUDY-006 | Functional Test | Could | Complete |
 
 ### Live Class Attendance (FR-LIVE)
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-LIVE-001 | Upcoming schedule (30-day): title, cohort, instructor, local time, participant count | F4-1 | Next.js PWA + Zoom API v2 | TC-LIVE-001 | Functional Test | Must | Not Started |
-| FR-LIVE-002 | Join button: inactive until 30 min before; deep-links to Zoom app or Web Client | F4-2 | Next.js PWA + Zoom API v2 | TC-LIVE-002 | Functional Test | Must | Not Started |
-| FR-LIVE-003 | Class replay via YouTube embed within 2 hours (Zoom webhook → YT upload pipeline) | F4-3 | Next.js PWA + Zoom Webhook + YouTube | TC-LIVE-003 | Integration Test | Must | Not Started |
+| FR-LIVE-001 | Upcoming schedule (30-day): title, cohort, instructor, local time, participant count | F4-1 | Next.js PWA + Zoom API v2 | TC-LIVE-001 | Functional Test | Must | Complete |
+| FR-LIVE-002 | Join button: inactive until 30 min before; deep-links to Zoom app or Web Client | F4-2 | Next.js PWA + Zoom API v2 | TC-LIVE-002 | Functional Test | Must | Complete |
+| FR-LIVE-003 | Class replay via YouTube embed within 2 hours (Zoom webhook → YT upload pipeline) | F4-3 | Next.js PWA + Zoom Webhook + YouTube | TC-LIVE-003 | Integration Test | Must | Deferred — Sprint 6 |
 | FR-LIVE-004 | Cohort city label (Sydney / Adelaide / Melbourne / Online) on every class card | F4-4 | Next.js PWA + Zoom API v2 | TC-LIVE-004 | Functional Test | Must | Not Started |
 | FR-LIVE-005 | Live participant count from Zoom API; refreshes every 60 seconds | F4-5 | Next.js PWA + Zoom API v2 | TC-LIVE-005 | Functional Test | Should | Not Started |
 
@@ -122,8 +122,8 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-CONSULT-001 | Instructor listing: name, photo, specialisation, languages, availability from Cal.com | F5-1 | Next.js PWA + Cal.com API v2 | TC-CONSULT-001 | Functional Test | Must | Not Started |
-| FR-CONSULT-002 | Cal.com booking calendar embedded in-app; slots in student's local timezone | F5-2 | Next.js PWA + Cal.com Embed | TC-CONSULT-002 | Functional Test | Must | Not Started |
+| FR-CONSULT-001 | Instructor listing: name, photo, specialisation, languages, availability from Cal.com | F5-1 | Next.js PWA + Cal.com API v2 | TC-CONSULT-001 | Functional Test | Must | Complete |
+| FR-CONSULT-002 | Cal.com booking calendar embedded in-app; slots in student's local timezone | F5-2 | Next.js PWA + Cal.com Embed | TC-CONSULT-002 | Functional Test | Must | Complete |
 | FR-CONSULT-003 | On booking: Cal.com creates Zoom meeting; confirmation email within 60 seconds | F5-3 | Cal.com + Zoom API v2 + Mautic | TC-CONSULT-003 | Integration Test | Must | Not Started |
 | FR-CONSULT-004 | Cancel/reschedule from confirmation email and My Bookings in profile | F5-4 | Next.js PWA + Cal.com API v2 | TC-CONSULT-004 | Functional Test | Should | Not Started |
 | FR-CONSULT-005 | Booking confirmation: Google Calendar link + .ics download | F5-5 | Next.js PWA + Cal.com | TC-CONSULT-005 | Functional Test | Should | Not Started |
@@ -141,18 +141,18 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-NOTIF-001 | Web Push 60 min before live class; tap opens Schedule at relevant card | F7-1 | Web Push VAPID + Next.js API | TC-NOTIF-001 | Integration Test | Must | Not Started |
-| FR-NOTIF-002 | Web Push to enrolled students within 5 min of new Moodle lesson published | F7-2 | Web Push VAPID + Moodle Webhook | TC-NOTIF-002 | Integration Test | Should | Not Started |
-| FR-NOTIF-003 | Web Push 60 min before consultation; triggered by Cal.com webhook | F7-3 | Web Push VAPID + Cal.com Webhook | TC-NOTIF-003 | Integration Test | Must | Not Started |
-| FR-NOTIF-004 | Notification preferences: independent toggle per category in profile | F7-4 | Next.js PWA + MySQL | TC-NOTIF-004 | Functional Test | Should | Not Started |
+| FR-NOTIF-001 | Web Push 60 min before live class; tap opens Schedule at relevant card | F7-1 | Web Push VAPID + Next.js API | TC-NOTIF-001 | Integration Test | Must | Complete |
+| FR-NOTIF-002 | Web Push to enrolled students within 5 min of new Moodle lesson published | F7-2 | Web Push VAPID + Moodle Webhook | TC-NOTIF-002 | Integration Test | Should | Complete |
+| FR-NOTIF-003 | Web Push 60 min before consultation; triggered by Cal.com webhook | F7-3 | Web Push VAPID + Cal.com Webhook | TC-NOTIF-003 | Integration Test | Must | Complete |
+| FR-NOTIF-004 | Notification preferences: independent toggle per category in profile | F7-4 | Next.js PWA + MySQL | TC-NOTIF-004 | Functional Test | Should | Complete |
 
 ### Progress Tracking & Achievements (FR-PROG)
 
 | Req ID | Requirement (Brief) | PRD Ref | Architecture Component | Test Case | Verification | Priority | Status |
 |--------|--------------------|---------|-----------------------|-----------|-------------|---------|--------|
-| FR-PROG-001 | Progress screen: enrolled courses with total/completed lessons, %, last activity | F8-1 | Next.js PWA + Moodle LMS | TC-PROG-001 | Functional Test | Must | Not Started |
-| FR-PROG-002 | Full-screen completion screen; shareable PNG achievement image downloadable | F8-2 | Next.js PWA + Moodle LMS | TC-PROG-002 | Functional Test | Should | Not Started |
-| FR-PROG-003 | Zoom attendance history log from Moodle grade book (Zoom attendance webhook) | F8-3 | Next.js PWA + Moodle + Zoom Webhook | TC-PROG-003 | Integration Test | Could | Not Started |
+| FR-PROG-001 | Progress screen: enrolled courses with total/completed lessons, %, last activity | F8-1 | Next.js PWA + Moodle LMS | TC-PROG-001 | Functional Test | Must | Complete |
+| FR-PROG-002 | Full-screen completion screen; shareable PNG achievement image downloadable | F8-2 | Next.js PWA + Moodle LMS | TC-PROG-002 | Functional Test | Should | Complete |
+| FR-PROG-003 | Zoom attendance history log from Moodle grade book (Zoom attendance webhook) | F8-3 | Next.js PWA + Moodle + Zoom Webhook | TC-PROG-003 | Integration Test | Could | Complete |
 | FR-PROG-004 | Downloadable Open Badges 2.0-compatible completion badge PNG | F8-4 | Next.js PWA | TC-PROG-004 | Functional Test | Could | Not Started |
 
 ---
@@ -161,7 +161,7 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Req ID | Metric / Target | Architecture Component | Test Case | Verification | Status |
 |--------|----------------|----------------------|-----------|-------------|--------|
-| NFR-PERF-001 | FCP < 2.0s on simulated 4G | Next.js PWA + Cloudflare CDN | TC-PERF-001 | Lighthouse Audit | Not Started |
+| NFR-PERF-001 | FCP < 2.0s on simulated 4G | Next.js PWA + Cloudflare CDN | TC-PERF-001 | Lighthouse Audit | Deferred — Sprint 6 |
 | NFR-PERF-002 | LCP < 2.5s; WebP images, lazy-loading below fold | Next.js PWA + Cloudflare CDN | TC-PERF-002 | Lighthouse Audit | Not Started |
 | NFR-PERF-003 | TTI < 3.5s; code splitting + dynamic imports per route | Next.js PWA | TC-PERF-003 | Lighthouse Audit | Not Started |
 | NFR-PERF-004 | API P95 ≤ 500ms under normal load | Next.js PWA + Moodle LMS + Redis | TC-PERF-004 | Load Test (k6) | Not Started |
@@ -171,11 +171,11 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Req ID | Metric / Target | Architecture Component | Test Case | Verification | Status |
 |--------|----------------|----------------------|-----------|-------------|--------|
-| NFR-SEC-001 | HTTPS / TLS 1.3 everywhere; no mixed content; HSTS | Cloudflare CDN + SSL | TC-SEC-001 | Security Audit (ZAP) | Not Started |
-| NFR-SEC-002 | 15-min access token; 30-day refresh; Redis blacklist revocation | Next.js PWA + Redis | TC-SEC-002 | Penetration Test | Not Started |
-| NFR-SEC-003 | OWASP Top 10 mitigations; zero critical ZAP findings | Next.js PWA + Moodle LMS | TC-SEC-003 | Security Audit (ZAP) | Not Started |
-| NFR-SEC-004 | CSRF token on state-mutating endpoints; SameSite=Strict cookies | Next.js PWA | TC-SEC-004 | Security Audit (ZAP) | Not Started |
-| NFR-SEC-005 | Rate limiting: auth 10 req/min/IP; API 300 req/min/user | Next.js PWA + Redis | TC-SEC-005 | Automated Test | Not Started |
+| NFR-SEC-001 | HTTPS / TLS 1.3 everywhere; no mixed content; HSTS | Cloudflare CDN + SSL | TC-SEC-001 | Security Audit (ZAP) | Complete |
+| NFR-SEC-002 | 15-min access token; 30-day refresh; Redis blacklist revocation | Next.js PWA + Redis | TC-SEC-002 | Penetration Test | Complete |
+| NFR-SEC-003 | OWASP Top 10 mitigations; zero critical ZAP findings | Next.js PWA + Moodle LMS | TC-SEC-003 | Security Audit (ZAP) | Complete |
+| NFR-SEC-004 | CSRF token on state-mutating endpoints; SameSite=Strict cookies | Next.js PWA | TC-SEC-004 | Security Audit (ZAP) | Complete |
+| NFR-SEC-005 | Rate limiting: auth 10 req/min/IP; API 300 req/min/user | Next.js PWA + Redis | TC-SEC-005 | Automated Test | Deferred — Sprint 6 |
 | NFR-SEC-006 | Daily AES-256 encrypted MySQL backups to Backblaze B2; 7-day retention | Hetzner CX32 + Backblaze B2 | TC-SEC-006 | Manual Inspection | Not Started |
 
 ### Availability (NFR-AVAIL)
@@ -184,7 +184,7 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 |--------|----------------|----------------------|-----------|-------------|--------|
 | NFR-AVAIL-001 | 99.5% monthly uptime; ≤ 3.6h unplanned downtime; 48h maintenance notice | Hetzner CX32 + Cloudflare | TC-AVAIL-001 | Uptime Monitoring | Not Started |
 | NFR-AVAIL-002 | Automated daily backups at 02:00 AEST via cron; failures trigger admin email | Hetzner CX32 + Backblaze B2 | TC-AVAIL-002 | Manual Inspection | Not Started |
-| NFR-AVAIL-003 | RTO < 4 hours: Hetzner snapshot + B2 DB restore | Hetzner CX32 + Backblaze B2 | TC-AVAIL-003 | DR Drill (manual) | Not Started |
+| NFR-AVAIL-003 | RTO < 4 hours: Hetzner snapshot + B2 DB restore | Hetzner CX32 + Backblaze B2 | TC-AVAIL-003 | DR Drill (manual) | Deferred — Sprint 6 |
 
 ### Accessibility (NFR-ACCESS)
 
@@ -198,9 +198,9 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Req ID | Metric / Target | Architecture Component | Test Case | Verification | Status |
 |--------|----------------|----------------------|-----------|-------------|--------|
-| NFR-PWA-001 | Lighthouse PWA score ≥ 90: HTTPS, Service Worker, manifest, offline fallback | Service Worker + Workbox | TC-PWA-001 | Lighthouse Audit | Not Started |
-| NFR-PWA-002 | Valid `manifest.json`: name, short_name, start_url, standalone, 192+512 maskable icons | Web App Manifest | TC-PWA-002 | Lighthouse Audit | Not Started |
-| NFR-PWA-003 | Workbox registers on first load; silent updates; user prompted on major update | Service Worker + Workbox | TC-PWA-003 | Functional Test | Not Started |
+| NFR-PWA-001 | Lighthouse PWA score ≥ 90: HTTPS, Service Worker, manifest, offline fallback | Service Worker + Workbox | TC-PWA-001 | Lighthouse Audit | Complete |
+| NFR-PWA-002 | Valid `manifest.json`: name, short_name, start_url, standalone, 192+512 maskable icons | Web App Manifest | TC-PWA-002 | Lighthouse Audit | Complete |
+| NFR-PWA-003 | Workbox registers on first load; silent updates; user prompted on major update | Service Worker + Workbox | TC-PWA-003 | Functional Test | Complete |
 
 ### Scalability (NFR-SCALE)
 
@@ -215,23 +215,23 @@ This RTM establishes bidirectional traceability between all 65 requirements (43 
 
 | Area | Total TCs | Not Started | In Progress | Complete | Deferred |
 |------|----------|-------------|-------------|---------|---------|
-| FR-AUTH | 5 | 5 | 0 | 0 | 0 |
-| FR-ONBOARD | 2 | 2 | 0 | 0 | 0 |
-| FR-DASH | 4 | 4 | 0 | 0 | 0 |
-| FR-CATALOG | 4 | 4 | 0 | 0 | 0 |
-| FR-STUDY | 6 | 6 | 0 | 0 | 0 |
-| FR-LIVE | 5 | 5 | 0 | 0 | 0 |
-| FR-CONSULT | 5 | 5 | 0 | 0 | 0 |
+| FR-AUTH | 5 | 0 | 0 | 5 | 0 |
+| FR-ONBOARD | 2 | 0 | 0 | 2 | 0 |
+| FR-DASH | 4 | 0 | 0 | 4 | 0 |
+| FR-CATALOG | 4 | 0 | 0 | 4 | 0 |
+| FR-STUDY | 6 | 0 | 0 | 6 | 0 |
+| FR-LIVE | 5 | 2 | 0 | 2 | 1 |
+| FR-CONSULT | 5 | 3 | 0 | 2 | 0 |
 | FR-OFFLINE | 4 | 4 | 0 | 0 | 0 |
-| FR-NOTIF | 4 | 4 | 0 | 0 | 0 |
-| FR-PROG | 4 | 4 | 0 | 0 | 0 |
-| NFR-PERF | 5 | 5 | 0 | 0 | 0 |
-| NFR-SEC | 6 | 6 | 0 | 0 | 0 |
-| NFR-AVAIL | 3 | 3 | 0 | 0 | 0 |
+| FR-NOTIF | 4 | 0 | 0 | 4 | 0 |
+| FR-PROG | 4 | 1 | 0 | 3 | 0 |
+| NFR-PERF | 5 | 4 | 0 | 0 | 1 |
+| NFR-SEC | 6 | 1 | 0 | 4 | 1 |
+| NFR-AVAIL | 3 | 2 | 0 | 0 | 1 |
 | NFR-ACCESS | 3 | 3 | 0 | 0 | 0 |
-| NFR-PWA | 3 | 3 | 0 | 0 | 0 |
+| NFR-PWA | 3 | 0 | 0 | 3 | 0 |
 | NFR-SCALE | 2 | 2 | 0 | 0 | 0 |
-| **TOTALS** | **65** | **65** | **0** | **0** | **0** |
+| **TOTALS** | **65** | **22** | **0** | **39** | **4** |
 
 ---
 

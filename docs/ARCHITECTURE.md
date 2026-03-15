@@ -18,7 +18,8 @@ The platform serves 500–5,000 students across three delivery modes:
 - Video hosted on **YouTube** at zero cost — no video CDN required
 - Infrastructure is **donor-sustained**; WooCommerce repurposed for voluntary donations
 - Zoom Pro API required — USD $13.33/host/month (billed annually)
-- Full stack on **Hetzner VPS** in Docker at ~AUD $65–75/month total
+- Back-end services (Moodle, WordPress, Cal.com, Mautic) on **Hetzner VPS** in Docker at ~AUD $65–75/month total
+- Next.js PWA deployed on **Vercel** — zero-config CI/CD with edge caching and built-in cron support
 - **Progressive Web App** gives students iOS/Android home-screen experience without App Store overhead
 
 ---
@@ -51,17 +52,20 @@ The platform serves 500–5,000 students across three delivery modes:
 ┌──────────────────────────────────────────────────────────────┐
 │                    CLOUDFLARE EDGE                            │
 │          CDN · SSL · DDoS · DNS · WAF  (Free)                │
-└──────────────────────┬───────────────────────────────────────┘
-                       │
-     ┌─────────────────┼─────────────────┐
-     │                 │                 │
-┌────┴────────┐  ┌─────┴──────────┐  ┌──┴──────────────┐
-│  WordPress  │  │  Moodle LMS    │  │  Next.js PWA    │
-│  Public +   │  │  Learning +    │  │  Student Portal │
-│  Donations  │  │  Admin         │  │  (installable)  │
-└────┬────────┘  └─────┬──────────┘  └──┬──────────────┘
-     │                 │                 │
-     └─────────────────┼─────────────────┘
+└───────────────────────┬──────────────────────────────────────┘
+                        │
+        ┌───────────────┴────────────────┐
+        │                                │
+┌───────┴──────────────┐   ┌─────────────┴──────────────┐
+│   VERCEL (Next.js)   │   │   HETZNER VPS · Docker     │
+│   Student PWA        │   │                            │
+│   learn.*            │   │  WordPress (introtoislam.org)
+│   Vercel Crons       │   │  Moodle LMS (lms.*)        │
+│                      │   │  Cal.com (book.*)          │
+│                      │   │  Mautic Email              │
+└───────┬──────────────┘   └───────┬────────────────────┘
+        │                          │
+        └──────────────┬───────────┘
                        │
      ┌─────────────────┼─────────────────┐
      │                 │                 │
@@ -82,11 +86,11 @@ The platform serves 500–5,000 students across three delivery modes:
 
 | Layer | Components |
 |-------|-----------|
-| 1 Presentation | WordPress (public site) + Next.js PWA (student portal) |
+| 1 Presentation | WordPress (public site, Hetzner) + Next.js PWA (student portal, Vercel) |
 | 2 Application | Moodle LMS · Zoom API · Cal.com Booking · Mautic Email |
 | 3 Media | YouTube Data API v3 — existing playlists — ZERO video hosting cost |
-| 4 Data | PostgreSQL 16 (Moodle) · MySQL 8 (WordPress) · Redis 7 |
-| 5 Infrastructure | Hetzner VPS · Docker Compose · Nginx · Cloudflare |
+| 4 Data | PostgreSQL 16 (Moodle) · MySQL 8 (WordPress) · Redis 7 — all on Hetzner |
+| 5 Infrastructure | Hetzner VPS (backend) · Vercel (Next.js) · Docker Compose · Nginx · Cloudflare |
 
 ---
 
@@ -113,7 +117,27 @@ The platform serves 500–5,000 students across three delivery modes:
 | Video Player | YouTube iframe API — playlist videos with chapter navigation |
 | Notifications | Web Push API — class reminders, new content alerts |
 | Offline | Service Worker caches course outlines, lesson notes, module structure |
-| Hosting | Docker container on Hetzner VPS (same server as Moodle) |
+| Hosting | Vercel — serverless deployment with edge caching and built-in cron support |
+
+### 4.2a Data Access Layer — Three-Tier Fallback
+
+The Next.js PWA never connects directly to any database. All data access goes through a layered fallback chain implemented in `src/proxy.ts`:
+
+```
+Tier 1 — Moodle REST API
+    ↓ (on error or missing token)
+Tier 2 — YouTube Data API v3
+    ↓ (on error or missing API key)
+Tier 3 — Static mock data (bundled JSON fixtures)
+```
+
+| Tier | Source | When Active | Behaviour |
+|------|--------|-------------|-----------|
+| 1 — Moodle REST | `MOODLE_URL` + `MOODLE_TOKEN` env vars | Hetzner VPS is live and credentials are set | Full course data, progress, forum threads |
+| 2 — YouTube API | `YOUTUBE_API_KEY` env var | Moodle unavailable; YouTube key present | Playlist metadata and video IDs only |
+| 3 — Static Mock | Bundled fixtures in `src/lib/` | No credentials available (local dev / Vercel preview) | Realistic placeholder data; all UI paths exercise |
+
+This design ensures the app deploys and renders on Vercel at any time — including before the Hetzner VPS is provisioned — without throwing runtime errors or empty screens. The middleware responsible for request proxying and auth-guarding API routes is `src/proxy.ts` (not `middleware.ts`).
 
 ### 4.3 Moodle LMS
 
@@ -240,7 +264,7 @@ Rather than native iOS/Android apps (typically AUD $40,000–80,000), the archit
 |-----------|--------------|
 | VPS Provider | Hetzner Cloud CX32 (4 vCPU, 8 GB RAM, 80 GB SSD) — ~AUD $18/month |
 | Container Runtime | Docker Compose — all services in single `docker-compose.yml` |
-| Reverse Proxy | Nginx — SSL termination, routing to Moodle / Next.js / Cal.com |
+| Reverse Proxy | Nginx — SSL termination, routing to Moodle / Cal.com / Mautic on Hetzner |
 | SSL Certificates | Let's Encrypt via Certbot — free, auto-renewed |
 | CDN / Edge | Cloudflare Free — DNS, CDN, DDoS, WAF |
 | Database | PostgreSQL 16 (Moodle) + MySQL 8 (WordPress) |
@@ -304,7 +328,7 @@ Rather than native iOS/Android apps (typically AUD $40,000–80,000), the archit
 |-------|-----------|---------|---------|
 | Public Site | WordPress + WooCommerce | GPL / Free | Same VPS |
 | LMS | Moodle 4.3 | GPL / Free | Same VPS |
-| Student Portal | Next.js 16 PWA | MIT / Free | Same VPS |
+| Student Portal | Next.js 16 PWA | MIT / Free | Vercel |
 | Video Platform | YouTube + Data API v3 | Free | YouTube Cloud |
 | Live Classes | Zoom Pro | USD $13.33/host/mo | Zoom Cloud |
 | Booking | Cal.com | AGPL / Free | Same VPS |
@@ -322,18 +346,88 @@ Rather than native iOS/Android apps (typically AUD $40,000–80,000), the archit
 
 ---
 
-## 9. Migration Path
+## 9. Source File Structure
+
+The Next.js PWA follows the App Router `src/` layout. Key files:
+
+```
+src/
+├── app/
+│   ├── layout.tsx                        # Root layout — Navbar, Footer, OfflineBanner
+│   ├── page.tsx                          # Dashboard (Moodle + Zoom aggregated data)
+│   ├── error.tsx                         # Route-level error boundary
+│   ├── global-error.tsx                  # Global error boundary
+│   ├── loading.tsx                       # Suspense loading skeleton
+│   ├── not-found.tsx                     # 404 page
+│   ├── offline/page.tsx                  # Offline fallback page (served by SW)
+│   ├── login/page.tsx                    # WordPress OAuth2 SSO entry
+│   ├── courses/                          # Course library, detail, lesson player
+│   ├── schedule/page.tsx                 # Live class schedule (Zoom API)
+│   ├── booking/page.tsx                  # 1:1 Cal.com embed
+│   ├── progress/page.tsx                 # Progress screen + completion badge
+│   ├── community/page.tsx                # Discussion hub
+│   ├── profile/                          # Profile, bookings, notification prefs
+│   └── api/
+│       ├── auth/[...nextauth]/route.ts   # NextAuth.js OAuth2 handler
+│       ├── courses/                      # Moodle course proxy routes
+│       ├── dashboard/                    # Aggregated dashboard + activity
+│       ├── lessons/[lessonId]/           # Complete, notes, discussion
+│       ├── schedule/                     # Zoom schedule + participants
+│       ├── zoom/webhook/route.ts         # HMAC-verified recording webhook
+│       ├── cal/                          # Cal.com bookings + webhook
+│       ├── push/                         # VAPID subscribe + send
+│       ├── progress/route.ts             # Progress summary
+│       ├── completion/badge/[courseId]/  # Completion badge endpoint
+│       ├── profile/route.ts              # Student profile data
+│       ├── health/route.ts               # Health check (/api/health)
+│       └── cron/                         # youtube-sync + class-reminders
+├── proxy.ts                              # Data access proxy — three-tier fallback;
+│                                         # auth-guards API routes
+├── components/
+│   ├── layout/                           # Navbar + Footer
+│   ├── auth/                             # AuthButton, SessionProviderWrapper
+│   ├── lesson/                           # YouTubePlayer, LessonView
+│   ├── booking/                          # CalEmbed
+│   ├── onboarding/                       # OnboardingCarousel
+│   └── pwa/                              # A2HSBanner, OfflineBanner
+├── hooks/
+│   ├── useOnboarding.ts                  # First-visit carousel flag
+│   ├── useA2HS.ts                        # beforeinstallprompt handler
+│   ├── useVideoProgress.ts               # YouTube timestamp persistence
+│   ├── useOfflineSync.ts                 # IndexedDB offline queue
+│   └── usePushNotifications.ts           # VAPID subscription flow
+└── lib/
+    ├── auth.ts                           # NextAuth v5 config
+    ├── moodle.ts                         # Moodle REST client (mock fallback)
+    ├── zoom.ts                           # Zoom S2S OAuth client (mock fallback)
+    ├── push.ts                           # web-push VAPID utility
+    ├── subscription-store.ts             # Push subscription persistence
+    ├── youtube.ts                        # YouTube Data API client
+    └── youtube-upload.ts                 # Zoom recording → YouTube pipeline
+```
+
+**Infrastructure scaffolding** (Hetzner deployment, not yet provisioned):
+```
+infra/
+├── nginx/        # Nginx reverse proxy config for Moodle / Cal.com / Mautic
+├── prometheus/   # Grafana + Prometheus monitoring config
+└── scripts/      # Deploy + backup automation scripts
+```
+
+---
+
+## 10. Migration Path
 
 | Phase | Weeks | Activities |
 |-------|-------|-----------|
-| **Phase 1 — Infrastructure** | 1–3 | Provision Hetzner CX32; deploy Docker Compose (Moodle, Next.js, PostgreSQL, Redis, Nginx); configure Cloudflare DNS for new subdomains; deploy Cal.com; configure Mautic + AWS SES |
+| **Phase 1 — Infrastructure** | 1–3 | Provision Hetzner CX32; deploy Docker Compose (Moodle, WordPress, Cal.com, Mautic, PostgreSQL, Redis, Nginx); configure Cloudflare DNS for new subdomains; Next.js PWA already live on Vercel |
 | **Phase 2 — Integration** | 4–6 | WP OAuth Server → Moodle SSO; WordPress webhook → Moodle auto-enrolment; Zoom plugin in Moodle; YouTube Data API v3 sync; Zoom recording webhook handler; WooCommerce donation product + Stripe |
 | **Phase 3 — Content Migration** | 7–9 | Re-create Foundation Course + Prophet Muhammad Course in Moodle; import student data from LearnPress; configure city cohorts; create 'Support Us' page; end-to-end test |
 | **Phase 4 — PWA Launch** | 10–12 | Complete Next.js PWA (Moodle REST + YouTube Player API); iOS/Android install testing; Web Push notifications; 20–30 student UAT; go-live |
 
 ---
 
-## 10. Security & Compliance
+## 11. Security & Compliance
 
 - All traffic over HTTPS via Cloudflare SSL + Let's Encrypt
 - Cloudflare WAF blocks common attack vectors (SQLi, XSS, bot scraping)
@@ -347,7 +441,7 @@ Rather than native iOS/Android apps (typically AUD $40,000–80,000), the archit
 
 ---
 
-## 11. Future Extensibility
+## 12. Future Extensibility
 
 | Capability | Approach |
 |-----------|---------|

@@ -1,13 +1,27 @@
 import { NextResponse } from "next/server";
 import { getCourseById } from "@/lib/moodle";
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ courseId: string }> }
 ) {
   const { courseId } = await params;
+
+  if (!/^\d+$/.test(courseId)) {
+    return NextResponse.json({ error: "Invalid course ID" }, { status: 400 });
+  }
+
   const course = (await getCourseById(courseId)) as { fullname?: string };
-  const title = course?.fullname ?? "Course";
+  const title = escapeXml(course?.fullname ?? "Course");
   const date = new Date().toLocaleDateString("en-AU", {
     day: "numeric",
     month: "long",

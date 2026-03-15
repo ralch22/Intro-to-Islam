@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { YouTubePlayer } from "./YouTubePlayer";
 import { CompletionScreen } from "@/components/course/CompletionScreen";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 type Lesson = {
   id: string;
@@ -42,8 +43,10 @@ function formatRelative(iso: string) {
 
 export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
   const router = useRouter();
+  const { markComplete } = useOfflineSync();
   const [completed, setCompleted] = useState(lesson.completed);
   const [marking, setMarking] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [activeTab, setActiveTab] = useState<"notes" | "discussion" | "about">("notes");
   const [showCompletion, setShowCompletion] = useState(false);
 
@@ -120,22 +123,29 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
   async function handleMarkComplete() {
     if (completed || marking) return;
     setMarking(true);
-    try {
-      const res = await fetch(`/api/lessons/${lesson.id}/complete`, { method: "POST" });
-      if (res.ok) {
-        setCompleted(true);
-      }
-    } catch {
-      // silently fail — mock env
-      setCompleted(true);
-    } finally {
-      setMarking(false);
-      // Check if this is the last lesson in the course
-      const sorted = [...allLessons].sort((a, b) => a.order - b.order);
-      const maxOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : 0;
-      if (lesson.order === maxOrder) {
-        setShowCompletion(true);
-      }
+    setQueued(false);
+
+    // Optimistic UI: mark complete locally regardless of online/offline status
+    setCompleted(true);
+
+    const { success, queued: wasQueued } = await markComplete(lesson.id);
+
+    setMarking(false);
+
+    if (wasQueued) {
+      // Offline — completion is persisted in IndexedDB and will sync when back online
+      setQueued(true);
+    } else if (!success) {
+      // Both fetch and queue failed — revert optimistic update and surface an error state
+      setCompleted(false);
+      setQueued(false);
+    }
+
+    // Check if this is the last lesson in the course regardless of online/offline status
+    const sorted = [...allLessons].sort((a, b) => a.order - b.order);
+    const maxOrder = sorted.length > 0 ? sorted[sorted.length - 1].order : 0;
+    if (lesson.order === maxOrder) {
+      setShowCompletion(true);
     }
   }
 
@@ -333,6 +343,16 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
                 )}
               </div>
             </div>
+
+            {/* Offline queued indicator */}
+            {queued && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2.5 rounded-xl" role="status">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Completion saved — will sync when online
+              </div>
+            )}
 
             {/* Navigation buttons */}
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
