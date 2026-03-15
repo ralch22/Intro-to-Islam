@@ -25,6 +25,14 @@ type DashboardData = {
   nextMeeting: Meeting | null;
 };
 
+type ActivityItem = {
+  id: string;
+  type: string;
+  description: string;
+  courseId?: string;
+  timestamp: string;
+};
+
 const communityActivity = [
   { user: "Sarah M.", action: "asked a question in", channel: "Foundation Course Q&A", ago: "2 hours ago" },
   { user: "Omar K.", action: "shared a resource in", channel: "General Discussion", ago: "5 hours ago" },
@@ -96,9 +104,25 @@ function MeetingCardSkeleton() {
   );
 }
 
+function formatRelativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  return "Just now";
+}
+
+const ACTIVITY_ICONS: Record<string, string> = {
+  lesson_complete: "✓",
+  class_attended: "📹",
+  enrolled: "🎓",
+};
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -108,6 +132,11 @@ export default function DashboardPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch("/api/dashboard/activity")
+      .then((r) => r.json())
+      .then((items: ActivityItem[]) => setActivity(items))
+      .catch(() => {});
   }, []);
 
   const currentCourse = data?.courses?.[0];
@@ -246,6 +275,32 @@ export default function DashboardPage() {
                 </div>
               )}
             </section>
+
+            {/* Recent Activity Feed */}
+            {activity.length > 0 && (
+              <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 md:p-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h2>
+                <div className="space-y-4">
+                  {activity.map((item) => (
+                    <div key={item.id} className="flex items-start gap-4">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0 ${
+                        item.type === "lesson_complete"
+                          ? "bg-green-100 text-green-600"
+                          : item.type === "class_attended"
+                          ? "bg-blue-100 text-[#1E40AF]"
+                          : "bg-pink-100 text-[#E81C74]"
+                      }`}>
+                        {ACTIVITY_ICONS[item.type] ?? "•"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800 font-medium">{item.description}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatRelativeTime(item.timestamp)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Modules */}
             <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 md:p-8">

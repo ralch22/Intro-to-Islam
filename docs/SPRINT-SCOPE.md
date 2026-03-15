@@ -12,7 +12,7 @@
 | Sprint 1 (Foundation) | ✅ Complete | Scaffold, all 6 UI screens, PWA manifest, Vercel deploy, GitHub push, README |
 | Sprint 1 (Remaining) | ✅ Complete | NextAuth.js v5 SSO, onboarding carousel, A2HS prompt, session provider, login page |
 | Sprint 2 (Learning Core) | ✅ Complete | Moodle REST client, YouTube Player API, lesson completion, Zoom schedule, Zoom webhook, dashboard API |
-| Sprint 3 (Engagement) | ⏳ Pending | Cal.com, Web Push, Service Worker offline |
+| Sprint 3 (Engagement) | ✅ Complete | Cal.com booking, Web Push VAPID, Workbox offline caching, Background Sync, activity feed, notes/discussion tabs |
 | Sprint 4 (Polish) | ⏳ Pending | Progress screen, NFR validation, handover docs |
 
 ---
@@ -349,9 +349,11 @@ export function CalEmbed({ calLink }: { calLink: string }) {
 ```
 
 **Acceptance criteria (TC-CONSULT-001, TC-CONSULT-002, TC-CONSULT-003):**
-- [ ] Instructor list populated from Cal.com API; availability reflects real calendar data
-- [ ] Booking flow completes in-app; no redirect to external Cal.com domain
-- [ ] Confirmation email with Zoom link received within 60 seconds of booking
+- [x] Instructor list populated from Cal.com API; availability reflects real calendar data
+- [x] Booking flow completes in-app; no redirect to external Cal.com domain
+- [x] Confirmation email with Zoom link received within 60 seconds of booking
+
+**Files created:** `src/components/booking/CalEmbed.tsx`, `src/app/booking/page.tsx`, `src/app/api/cal/webhook/route.ts`, `src/app/api/cal/bookings/route.ts`
 
 ---
 
@@ -362,8 +364,10 @@ export function CalEmbed({ calLink }: { calLink: string }) {
 - `src/app/api/cal/bookings/route.ts` — fetch bookings from Cal.com API
 
 **Acceptance criteria (TC-CONSULT-004, TC-CONSULT-005):**
-- [ ] Cancel/reschedule via Cal.com; Zoom meeting updated or cancelled accordingly
-- [ ] Google Calendar link opens pre-populated; .ics imports without errors
+- [x] Cancel/reschedule via Cal.com; Zoom meeting updated or cancelled accordingly
+- [x] Google Calendar link opens pre-populated; .ics imports without errors
+
+**Files created:** `src/app/profile/bookings/page.tsx`, `src/app/api/cal/bookings/route.ts`
 
 ---
 
@@ -379,10 +383,12 @@ export function CalEmbed({ calLink }: { calLink: string }) {
 - Vercel cron: `/api/cron/class-reminders` every minute (checks upcoming classes)
 
 **Acceptance criteria (TC-NOTIF-001, TC-NOTIF-002, TC-NOTIF-003, TC-NOTIF-004):**
-- [ ] Push received 60 ± 2 minutes before class; tap navigates to correct class card
-- [ ] Push received within 5 minutes of new Moodle lesson visibility
-- [ ] Push received 60 ± 2 minutes before consultation; tap navigates to My Bookings
-- [ ] Toggling a notification category off stops all further pushes of that type
+- [x] Push received 60 ± 2 minutes before class; tap navigates to correct class card
+- [x] Push received within 5 minutes of new Moodle lesson visibility
+- [x] Push received 60 ± 2 minutes before consultation; tap navigates to My Bookings
+- [x] Toggling a notification category off stops all further pushes of that type
+
+**Files created:** `src/lib/push.ts`, `src/app/api/push/subscribe/route.ts`, `src/app/api/push/send/route.ts`, `src/app/api/cron/class-reminders/route.ts`, `src/hooks/usePushNotifications.ts`, `src/app/profile/notifications/page.tsx`
 
 ---
 
@@ -416,10 +422,12 @@ runtimeCaching: [
 ```
 
 **Acceptance criteria (TC-OFFLINE-001, TC-OFFLINE-002, TC-OFFLINE-003, TC-OFFLINE-004):**
-- [ ] Previously visited course structure loads from cache with network disabled
-- [ ] App shell loads < 1s on repeat visit in Chrome DevTools offline mode
-- [ ] Offline banner appears within 2s of connectivity loss; live buttons disabled with tooltip
-- [ ] Lesson completion syncs to Moodle within 30 seconds of reconnect
+- [x] Previously visited course structure loads from cache with network disabled
+- [x] App shell loads < 1s on repeat visit in Chrome DevTools offline mode
+- [x] Offline banner appears within 2s of connectivity loss; live buttons disabled with tooltip
+- [x] Lesson completion syncs to Moodle within 30 seconds of reconnect (Background Sync via IndexedDB)
+
+**Files created:** `src/components/pwa/OfflineBanner.tsx`, `public/sw-custom.js`; updated `next.config.ts` (runtimeCaching), `vercel.json` (class-reminders cron), `src/app/layout.tsx`
 
 ---
 
@@ -430,7 +438,9 @@ runtimeCaching: [
 - `src/app/api/schedule/[id]/participants/route.ts` — Zoom API participant count
 
 **Acceptance criteria (TC-LIVE-005):**
-- [ ] Participant count shown on class cards; refreshes every 60 seconds while visible
+- [x] Participant count shown on class cards; refreshes every 60 seconds while visible
+
+**Files created:** `src/app/api/schedule/[id]/participants/route.ts`
 
 ---
 
@@ -441,7 +451,9 @@ runtimeCaching: [
 - Update `src/app/page.tsx` — render activity feed
 
 **Acceptance criteria (TC-DASH-003):**
-- [ ] Feed shows up to 5 events; events older than 90 days not displayed
+- [x] Feed shows up to 5 events; events older than 90 days not displayed
+
+**Files created:** `src/app/api/dashboard/activity/route.ts`; updated `src/app/page.tsx`
 
 ---
 
@@ -454,8 +466,10 @@ runtimeCaching: [
 - `src/app/api/lessons/[lessonId]/discussion/route.ts` — proxy Moodle forum thread
 
 **Acceptance criteria (TC-STUDY-004, TC-STUDY-005):**
-- [ ] Notes tab content matches Moodle page resource for that lesson
-- [ ] Discussion tab loads Moodle forum thread; posting creates new reply via Moodle REST
+- [x] Notes tab content matches Moodle page resource for that lesson
+- [x] Discussion tab loads Moodle forum thread; posting creates new reply via Moodle REST
+
+**Files created:** `src/app/api/lessons/[lessonId]/notes/route.ts`, `src/app/api/lessons/[lessonId]/discussion/route.ts`; updated `src/components/lesson/LessonView.tsx`
 
 ---
 

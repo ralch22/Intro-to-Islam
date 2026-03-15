@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import SessionProviderWrapper from "@/components/auth/SessionProviderWrapper";
 import OnboardingCarousel from "@/components/onboarding/OnboardingCarousel";
 import A2HSBanner from "@/components/pwa/A2HSBanner";
+import { OfflineBanner } from "@/components/pwa/OfflineBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col`}>
         <SessionProviderWrapper>
+          <OfflineBanner />
           <Navbar />
           <div className="flex-grow">{children}</div>
           <Footer />

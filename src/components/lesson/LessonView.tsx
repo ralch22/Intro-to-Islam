@@ -21,11 +21,38 @@ interface LessonViewProps {
   allLessons: Lesson[];
 }
 
+type DiscussionPost = {
+  id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  timestamp: string;
+};
+
+function formatRelative(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  return "Just now";
+}
+
 export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
   const router = useRouter();
   const [completed, setCompleted] = useState(lesson.completed);
   const [marking, setMarking] = useState(false);
-  const [activeTab, setActiveTab] = useState<"notes" | "about">("notes");
+  const [activeTab, setActiveTab] = useState<"notes" | "discussion" | "about">("notes");
+
+  // Notes tab state
+  const [notesText, setNotesText] = useState<string | null>(null);
+  const [notesLoading, setNotesLoading] = useState(false);
+
+  // Discussion tab state
+  const [posts, setPosts] = useState<DiscussionPost[]>([]);
+  const [discussionLoading, setDiscussionLoading] = useState(false);
+  const [newPost, setNewPost] = useState("");
+  const [posting, setPosting] = useState(false);
 
   // Sort lessons by order to find prev/next
   const sorted = [...allLessons].sort((a, b) => a.order - b.order);
@@ -56,6 +83,37 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [goToPrev, goToNext]);
 
+  // Fetch notes when tab is active
+  useEffect(() => {
+    if (activeTab === "notes" && notesText === null) {
+      setNotesLoading(true);
+      fetch(`/api/lessons/${lesson.id}/notes`)
+        .then((r) => r.json())
+        .then((data: { notes: string }) => {
+          setNotesText(data.notes ?? lesson.notes);
+          setNotesLoading(false);
+        })
+        .catch(() => {
+          setNotesText(lesson.notes);
+          setNotesLoading(false);
+        });
+    }
+  }, [activeTab, lesson.id, lesson.notes, notesText]);
+
+  // Fetch discussion posts when tab is active
+  useEffect(() => {
+    if (activeTab === "discussion" && posts.length === 0) {
+      setDiscussionLoading(true);
+      fetch(`/api/lessons/${lesson.id}/discussion`)
+        .then((r) => r.json())
+        .then((data: DiscussionPost[]) => {
+          setPosts(data);
+          setDiscussionLoading(false);
+        })
+        .catch(() => setDiscussionLoading(false));
+    }
+  }, [activeTab, lesson.id, posts.length]);
+
   async function handleMarkComplete() {
     if (completed || marking) return;
     setMarking(true);
@@ -72,9 +130,34 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
     }
   }
 
+  async function handlePostDiscussion() {
+    if (!newPost.trim() || posting) return;
+    setPosting(true);
+    try {
+      const res = await fetch(`/api/lessons/${lesson.id}/discussion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newPost.trim() }),
+      });
+      const post = await res.json() as DiscussionPost;
+      setPosts((prev) => [...prev, post]);
+      setNewPost("");
+    } catch {
+      // ignore
+    } finally {
+      setPosting(false);
+    }
+  }
+
   const progress = allLessons.length > 0
     ? Math.round((allLessons.filter((l) => l.completed).length / allLessons.length) * 100)
     : 0;
+
+  const tabs = [
+    { id: "notes" as const, label: "Instructor Notes" },
+    { id: "discussion" as const, label: "Discussion" },
+    { id: "about" as const, label: "About" },
+  ];
 
   return (
     <main className="flex-grow flex flex-col bg-gradient-to-b from-gray-50 to-[#F3F4F6]">
@@ -119,29 +202,102 @@ export function LessonView({ lesson, courseId, allLessons }: LessonViewProps) {
               {/* Tabs */}
               <div className="border-b border-gray-100 px-6">
                 <nav className="flex space-x-6">
-                  {(["notes", "about"] as const).map((tab) => (
+                  {tabs.map((tab) => (
                     <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
                       className={`py-3 px-1 border-b-2 text-sm font-medium capitalize transition-colors ${
-                        activeTab === tab
+                        activeTab === tab.id
                           ? "border-[#E81C74] text-[#E81C74]"
                           : "border-transparent text-gray-500 hover:text-gray-700"
                       }`}
                     >
-                      {tab === "notes" ? "Instructor Notes" : "About"}
+                      {tab.label}
                     </button>
                   ))}
                 </nav>
               </div>
 
               <div className="p-6 md:p-8">
-                {activeTab === "notes" ? (
+                {/* Notes Tab */}
+                {activeTab === "notes" && (
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">{lesson.title}</h2>
-                    <p className="text-gray-600 leading-relaxed">{lesson.notes}</p>
+                    {notesLoading ? (
+                      <div className="space-y-2 animate-pulse">
+                        <div className="h-3 bg-gray-200 rounded w-3/4" />
+                        <div className="h-3 bg-gray-200 rounded w-full" />
+                        <div className="h-3 bg-gray-200 rounded w-2/3" />
+                      </div>
+                    ) : (
+                      <p className="text-gray-600 leading-relaxed">{notesText ?? lesson.notes}</p>
+                    )}
                   </div>
-                ) : (
+                )}
+
+                {/* Discussion Tab */}
+                {activeTab === "discussion" && (
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Discussion</h2>
+
+                    {discussionLoading ? (
+                      <div className="space-y-4 animate-pulse">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="flex gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gray-200 shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-3 bg-gray-200 rounded w-24" />
+                              <div className="h-3 bg-gray-200 rounded w-3/4" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4 mb-6">
+                        {posts.map((post) => (
+                          <div key={post.id} className="flex gap-3 items-start">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#E81C74] to-[#1E40AF] flex items-center justify-center text-white font-bold text-xs shrink-0">
+                              {post.avatar}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2 mb-1">
+                                <span className="font-semibold text-sm text-gray-900">{post.author}</span>
+                                <span className="text-xs text-gray-400">{formatRelative(post.timestamp)}</span>
+                              </div>
+                              <p className="text-sm text-gray-700 leading-relaxed">{post.content}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {posts.length === 0 && (
+                          <p className="text-gray-400 text-sm text-center py-4">No comments yet. Be the first!</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Post form */}
+                    <div className="border-t border-gray-100 pt-4">
+                      <textarea
+                        value={newPost}
+                        onChange={(e) => setNewPost(e.target.value)}
+                        placeholder="Share a question or comment..."
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl p-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E81C74] resize-none"
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          onClick={handlePostDiscussion}
+                          disabled={posting || !newPost.trim()}
+                          className="bg-[#E81C74] hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded-full text-sm transition-colors"
+                        >
+                          {posting ? "Posting..." : "Post"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* About Tab */}
+                {activeTab === "about" && (
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">About This Lesson</h2>
                     <p className="text-gray-600">
