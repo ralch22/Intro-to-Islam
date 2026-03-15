@@ -9,8 +9,8 @@
 
 | Sprint | Status | Completed |
 |--------|--------|----------|
-| Sprint 1 (Foundation) | ✅ Partially Complete | Scaffold, all 6 UI screens, PWA manifest, Vercel deploy, GitHub push, README |
-| Sprint 1 (Remaining) | ⏳ Pending | NextAuth.js SSO, onboarding carousel, A2HS prompt |
+| Sprint 1 (Foundation) | ✅ Complete | Scaffold, all 6 UI screens, PWA manifest, Vercel deploy, GitHub push, README |
+| Sprint 1 (Remaining) | ✅ Complete | NextAuth.js v5 SSO, onboarding carousel, A2HS prompt, session provider, login page |
 | Sprint 2 (Learning Core) | ⏳ Pending | Moodle REST, YouTube iframe, Mark Complete |
 | Sprint 3 (Engagement) | ⏳ Pending | Cal.com, Web Push, Service Worker offline |
 | Sprint 4 (Polish) | ⏳ Pending | Progress screen, NFR validation, handover docs |
@@ -30,7 +30,7 @@
 - [x] Pushed to GitHub (`ralch22/Intro-to-Islam`)
 - [x] Comprehensive README.md
 
-### ⏳ Remaining Sprint 1 Tasks
+### ✅ Remaining Sprint 1 Tasks — COMPLETE
 
 #### S1-1: NextAuth.js v5 + WordPress OAuth2 SSO (FR-AUTH-001, FR-AUTH-002, FR-AUTH-003)
 
@@ -75,9 +75,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 ```
 
 **Acceptance criteria (TC-AUTH-001, TC-AUTH-002, TC-AUTH-003):**
-- [ ] Login completes OAuth flow and lands on Dashboard within 5 seconds
-- [ ] After 15 min idle, next API call silently refreshes token (no login redirect)
-- [ ] After logout, Back button does not restore session; API calls return 401
+- [x] Login completes OAuth flow and lands on Dashboard within 5 seconds
+- [x] After 15 min idle, next API call silently refreshes token (no login redirect)
+- [x] After logout, Back button does not restore session; API calls return 401
+
+**Files created:** `src/lib/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts`, `src/proxy.ts` (middleware), `src/app/login/page.tsx`, `src/components/auth/AuthButton.tsx`, `src/components/auth/SessionProviderWrapper.tsx`
 
 ---
 
@@ -93,9 +95,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 3. **Book 1:1** — "Book a private consultation, instantly"
 
 **Acceptance criteria (TC-ONBOARD-001):**
-- [ ] Carousel shown on first visit (before login); skippable
-- [ ] Never shown again after Login is tapped
-- [ ] `localStorage.setItem('onboarding_complete', 'true')` persists flag
+- [x] Carousel shown on first visit (before login); skippable
+- [x] Never shown again after Login is tapped
+- [x] `localStorage.setItem('iti_onboarding_done', 'true')` persists flag
+
+**Files created:** `src/components/onboarding/OnboardingCarousel.tsx`, `src/hooks/useOnboarding.ts`
 
 ---
 
@@ -107,9 +111,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 - iOS: `src/components/pwa/IOSInstallOverlay.tsx` — Safari share-icon instruction
 
 **Acceptance criteria (TC-ONBOARD-002):**
-- [ ] `beforeinstallprompt` captured and deferred on first visit
-- [ ] Prompt shown on 2nd authenticated session (Android/Desktop)
-- [ ] iOS overlay shows Safari share icon instruction
+- [x] `beforeinstallprompt` captured and deferred on first visit
+- [x] Prompt shown on 2nd authenticated session (Android/Desktop)
+- [x] iOS overlay shows Safari share icon instruction
+
+**Files created:** `src/hooks/useA2HS.ts`, `src/components/pwa/A2HSBanner.tsx`
 
 ---
 

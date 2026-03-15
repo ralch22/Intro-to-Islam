@@ -3,6 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import SessionProviderWrapper from "@/components/auth/SessionProviderWrapper";
+import OnboardingCarousel from "@/components/onboarding/OnboardingCarousel";
+import A2HSBanner from "@/components/pwa/A2HSBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,9 +30,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col`}>
-        <Navbar />
-        <div className="flex-grow">{children}</div>
-        <Footer />
+        <SessionProviderWrapper>
+          <Navbar />
+          <div className="flex-grow">{children}</div>
+          <Footer />
+          <OnboardingCarousel />
+          <A2HSBanner />
+        </SessionProviderWrapper>
       </body>
     </html>
   );
