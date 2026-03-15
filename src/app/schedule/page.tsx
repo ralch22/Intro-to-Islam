@@ -1,62 +1,197 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const upcomingSessions = [
-  {
-    id: "s1",
-    status: "live-soon",
-    label: "Live in 2 hours",
-    course: "Foundation Course",
-    courseColor: "bg-blue-50 text-[#1E40AF]",
-    title: "Module 1 Q&A: Understanding Core Beliefs",
-    instructor: "Ustadh Ahmed",
-    time: "Today, 7:00 PM – 8:30 PM (AEST)",
-    countdown: "01:59:45",
-    description: "Bring your questions from Module 1. We will be discussing the six articles of faith in detail and their practical implications in our daily lives.",
-    zoomUrl: "#",
-  },
-  {
-    id: "s2",
-    status: "upcoming",
-    label: "Upcoming",
-    course: "Tajweed 101",
-    courseColor: "bg-purple-50 text-[#6B21A8]",
-    title: "Makharij: Points of Articulation",
-    instructor: "Sheikh Bilal",
-    time: "Thu, Oct 24 • 6:00 PM (AEST)",
-    description: "Interactive practice session focusing on the correct pronunciation of heavy letters. Please ensure your microphone is working.",
-    zoomUrl: null,
-  },
-  {
-    id: "s3",
-    status: "upcoming",
-    label: "Upcoming",
-    course: "Foundation Course",
-    courseColor: "bg-blue-50 text-[#1E40AF]",
-    title: "Module 2 Introduction: The Five Pillars",
-    instructor: "Ustadh Ahmed",
-    time: "Mon, Oct 28 • 7:00 PM (AEST)",
-    description: "",
-    zoomUrl: null,
-  },
-];
+type ZoomMeeting = {
+  id: string;
+  topic: string;
+  start_time: string;
+  duration: number;
+  join_url: string;
+  cohort: string;
+  participants: number;
+};
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+}
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("en-AU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+}
+
+function getCountdown(start: string): { label: string; isLive: boolean; canJoin: boolean } {
+  const now = Date.now();
+  const startMs = new Date(start).getTime();
+  const diffMs = startMs - now;
+  const thirtyMin = 30 * 60 * 1000;
+
+  if (diffMs <= 0) {
+    return { label: "Live Now", isLive: true, canJoin: true };
+  }
+  if (diffMs <= thirtyMin) {
+    const mins = Math.ceil(diffMs / 60000);
+    return { label: `Starting in ${mins} min`, isLive: false, canJoin: true };
+  }
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (days > 0) return { label: `Starts in ${days}d ${hours}h`, isLive: false, canJoin: false };
+  if (hours > 0) return { label: `Starts in ${hours}h ${mins}m`, isLive: false, canJoin: false };
+  return { label: `Starts in ${mins} min`, isLive: false, canJoin: false };
+}
+
+function cohortColor(cohort: string) {
+  switch (cohort) {
+    case "Sydney": return "bg-blue-100 text-[#1E40AF]";
+    case "Melbourne": return "bg-purple-100 text-purple-800";
+    case "Adelaide": return "bg-green-100 text-green-800";
+    default: return "bg-gray-100 text-gray-700";
+  }
+}
+
+function MeetingCard({ meeting }: { meeting: ZoomMeeting }) {
+  const [countdown, setCountdown] = useState(() => getCountdown(meeting.start_time));
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdown(getCountdown(meeting.start_time));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [meeting.start_time]);
+
+  const day = new Date(meeting.start_time).toLocaleDateString("en-AU", { day: "numeric" });
+  const month = new Date(meeting.start_time).toLocaleDateString("en-AU", { month: "short" }).toUpperCase();
+  const weekday = new Date(meeting.start_time).toLocaleDateString("en-AU", { weekday: "short" });
+
+  return (
+    <div
+      className={`bg-white rounded-xl shadow-sm border-y border-r border-gray-200 overflow-hidden hover:shadow-md transition-shadow ${
+        countdown.isLive ? "border-l-4 border-l-[#E81C74]" : "border"
+      }`}
+    >
+      <div className="p-5 md:p-6 flex flex-col md:flex-row gap-6">
+
+        {/* Date block */}
+        <div className="flex flex-row md:flex-col items-center gap-4 md:gap-0 md:w-20 shrink-0">
+          <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-3 text-center min-w-[72px]">
+            <span className="block text-xs font-semibold text-[#E81C74] uppercase">{month}</span>
+            <span className="block text-2xl font-bold text-gray-900">{day}</span>
+            <span className="block text-xs text-gray-500">{weekday}</span>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            {countdown.isLive && (
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide bg-pink-100 text-[#E81C74] animate-pulse">
+                Live Now
+              </span>
+            )}
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cohortColor(meeting.cohort)}`}>
+              {meeting.cohort}
+            </span>
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-1">{meeting.topic}</h3>
+          <div className="flex flex-wrap items-center text-sm text-gray-600 gap-4 mb-2">
+            <span>🕐 {formatTime(meeting.start_time)}</span>
+            <span>⏱ {meeting.duration} min</span>
+            <span>👥 {meeting.participants} enrolled</span>
+          </div>
+          <p className="text-sm text-gray-500">{formatDate(meeting.start_time)}</p>
+        </div>
+
+        {/* CTA */}
+        <div className="flex flex-col justify-center gap-3 md:w-48 shrink-0 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
+          <div className="text-center mb-1">
+            <span className={`block text-sm font-bold font-mono ${countdown.isLive ? "text-[#E81C74]" : "text-gray-600"}`}>
+              {countdown.label}
+            </span>
+          </div>
+          {countdown.canJoin ? (
+            <a
+              href={meeting.join_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-[#1E40AF] hover:bg-blue-800 text-white font-medium py-2.5 rounded-lg transition-colors text-sm flex justify-center items-center gap-2 shadow-sm"
+            >
+              📹 Join Session
+            </a>
+          ) : (
+            <button
+              disabled
+              className="w-full bg-gray-100 text-gray-400 font-medium py-2.5 rounded-lg text-sm flex justify-center items-center gap-2 cursor-not-allowed"
+            >
+              📹 Join Session
+            </button>
+          )}
+          <button className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-lg transition-colors text-xs flex justify-center items-center gap-2">
+            📅 Add to Calendar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 md:p-6 animate-pulse">
+      <div className="flex gap-6">
+        <div className="w-20 h-20 bg-gray-200 rounded-xl shrink-0" />
+        <div className="flex-1 space-y-3">
+          <div className="h-4 bg-gray-200 rounded w-1/4" />
+          <div className="h-5 bg-gray-200 rounded w-3/4" />
+          <div className="h-4 bg-gray-200 rounded w-1/2" />
+        </div>
+        <div className="w-40 space-y-3 hidden md:block">
+          <div className="h-4 bg-gray-200 rounded" />
+          <div className="h-9 bg-gray-200 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const pastSessions = [
   { id: "p1", date: "Oct 15, 2026", title: "Intro to Islamic History", description: "Overview of the prophetic era and early caliphates. Includes student Q&A." },
   { id: "p2", date: "Oct 10, 2026", title: "Foundation: What is Islam?", description: "First module discussion covering the basic definitions and concepts." },
 ];
 
-const calendarDays = [
-  { day: 21, today: true, dot: null },
-  { day: 22, today: false, dot: null },
-  { day: 23, today: false, dot: null },
-  { day: 24, today: false, dot: "purple" },
-  { day: 25, today: false, dot: null },
-  { day: 26, today: false, dot: null },
-  { day: 27, today: false, dot: null },
-  { day: 28, today: false, dot: "blue" },
-];
-
 export default function SchedulePage() {
+  const [meetings, setMeetings] = useState<ZoomMeeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/schedule")
+      .then((r) => r.json())
+      .then((data) => {
+        setMeetings(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load schedule.");
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <main className="flex-grow flex flex-col bg-gradient-to-b from-gray-50 to-[#F3F4F6]">
       <div className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 w-full">
@@ -70,6 +205,7 @@ export default function SchedulePage() {
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
             <select className="w-full sm:w-48 appearance-none bg-white border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E81C74] text-sm">
+              <option>Local Timezone</option>
               <option>AEST (Sydney)</option>
               <option>EST (New York)</option>
               <option>PST (Los Angeles)</option>
@@ -97,62 +233,28 @@ export default function SchedulePage() {
             <section>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Upcoming Sessions</h2>
-                <button className="text-sm font-medium text-[#E81C74] hover:text-pink-700">View All</button>
               </div>
 
               <div className="space-y-4">
-                {upcomingSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`bg-white rounded-xl shadow-sm border-y border-r border-gray-200 overflow-hidden hover:shadow-md transition-shadow ${
-                      session.status === "live-soon" ? "border-l-4 border-l-[#E81C74]" : "border"
-                    }`}
-                  >
-                    <div className="p-5 md:p-6 flex flex-col md:flex-row gap-6">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${
-                            session.status === "live-soon" ? "bg-pink-100 text-[#E81C74]" : "bg-gray-100 text-gray-600"
-                          }`}>
-                            {session.label}
-                          </span>
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${session.courseColor}`}>
-                            {session.course}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">{session.title}</h3>
-                        <div className="flex flex-wrap items-center text-sm text-gray-600 gap-4 mb-4">
-                          <span>👤 {session.instructor}</span>
-                          <span>🕐 {session.time}</span>
-                        </div>
-                        {session.description && (
-                          <p className="text-sm text-gray-500 line-clamp-2">{session.description}</p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col justify-center gap-3 md:w-48 shrink-0 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                        {session.status === "live-soon" && (
-                          <div className="text-center mb-2">
-                            <span className="block text-2xl font-bold text-[#E81C74] font-mono">{session.countdown}</span>
-                            <span className="text-xs text-gray-500 uppercase tracking-wider">Until Live</span>
-                          </div>
-                        )}
-                        {session.zoomUrl ? (
-                          <a href={session.zoomUrl} className="w-full bg-[#E81C74] hover:bg-pink-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm flex justify-center items-center gap-2 shadow-sm">
-                            📹 Join Zoom
-                          </a>
-                        ) : (
-                          <button disabled className="w-full bg-gray-100 text-gray-400 font-medium py-2.5 rounded-lg text-sm flex justify-center items-center gap-2 cursor-not-allowed">
-                            📹 Join Zoom
-                          </button>
-                        )}
-                        <button className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 rounded-lg transition-colors text-xs flex justify-center items-center gap-2">
-                          📅 Add to Calendar
-                        </button>
-                      </div>
-                    </div>
+                {loading ? (
+                  <>
+                    <SkeletonCard />
+                    <SkeletonCard />
+                    <SkeletonCard />
+                  </>
+                ) : error ? (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6 text-sm">
+                    {error}
                   </div>
-                ))}
+                ) : meetings.length === 0 ? (
+                  <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-500">
+                    No upcoming sessions scheduled.
+                  </div>
+                ) : (
+                  meetings.map((meeting) => (
+                    <MeetingCard key={meeting.id} meeting={meeting} />
+                  ))
+                )}
               </div>
             </section>
 
@@ -203,59 +305,16 @@ export default function SchedulePage() {
               <h3 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wider">Filter Schedule</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-2">By Course</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-2">By Cohort</label>
                   <div className="space-y-2">
-                    {["Foundation Course", "Tajweed 101", "Islamic History"].map((course) => (
-                      <label key={course} className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" defaultChecked={course !== "Islamic History"} className="rounded h-4 w-4 border-gray-300" style={{ accentColor: "#E81C74" }} />
-                        <span className="text-sm text-gray-700">{course}</span>
+                    {["Online", "Sydney", "Melbourne", "Adelaide"].map((cohort) => (
+                      <label key={cohort} className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" defaultChecked className="rounded h-4 w-4 border-gray-300" style={{ accentColor: "#E81C74" }} />
+                        <span className="text-sm text-gray-700">{cohort}</span>
                       </label>
                     ))}
                   </div>
                 </div>
-                <div className="pt-4 border-t border-gray-100">
-                  <label className="block text-xs font-medium text-gray-500 mb-2">By Instructor</label>
-                  <select className="w-full bg-gray-50 border border-gray-200 text-gray-700 py-2 px-3 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#E81C74]">
-                    <option>All Instructors</option>
-                    <option>Ustadh Ahmed</option>
-                    <option>Sheikh Bilal</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Mini calendar */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                <button className="text-gray-400 hover:text-gray-600">‹</button>
-                <h3 className="font-bold text-gray-900 text-sm">October 2026</h3>
-                <button className="text-gray-400 hover:text-gray-600">›</button>
-              </div>
-              <div className="p-4">
-                <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                  {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
-                    <div key={d} className="text-xs font-medium text-gray-400">{d}</div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                  {calendarDays.map((d) => (
-                    <div key={d.day} className={`py-1 relative rounded cursor-pointer ${
-                      d.today ? "bg-[#E81C74] text-white font-bold shadow-sm" : "text-gray-700 hover:bg-gray-100"
-                    }`}>
-                      {d.day}
-                      {d.dot && (
-                        <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
-                          d.dot === "blue" ? "bg-[#1E40AF]" : "bg-[#6B21A8]"
-                        }`} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-gray-50 p-3 border-t border-gray-100 flex justify-center gap-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#E81C74] inline-block" /> Today</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#1E40AF] inline-block" /> Foundation</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#6B21A8] inline-block" /> Tajweed</span>
               </div>
             </div>
 
@@ -270,6 +329,14 @@ export default function SchedulePage() {
                 Contact Support
               </button>
             </div>
+
+            {/* Back to dashboard */}
+            <Link
+              href="/"
+              className="flex items-center justify-center gap-2 w-full bg-white border border-gray-200 hover:border-[#E81C74] text-gray-700 hover:text-[#E81C74] font-medium py-3 rounded-xl transition-colors text-sm shadow-sm"
+            >
+              ← Back to Dashboard
+            </Link>
           </div>
         </div>
       </div>

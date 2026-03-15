@@ -1,27 +1,127 @@
+"use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const currentCourse = {
-  id: "1",
-  title: "Foundation Course",
-  module: "Module 2: Core Beliefs",
-  progress: 75,
-  nextLesson: "Understanding Tawheed",
-  nextLessonId: "2-1",
-  estTime: "15 mins",
+type Course = {
+  id: number;
+  fullname: string;
+  shortname: string;
+  summary: string;
+  progress: number;
 };
 
-const modules = [
-  { id: "1", title: "Module 1: Introduction", status: "completed", note: "Completed on Oct 15" },
-  { id: "2", title: "Module 2: Core Beliefs", status: "active", note: "In Progress • 75%" },
-  { id: "3", title: "Module 3: Daily Practices", status: "locked", note: "Complete Module 2 to unlock" },
-];
+type Meeting = {
+  id: string;
+  topic: string;
+  start_time: string;
+  duration: number;
+  join_url: string;
+  cohort: string;
+  participants: number;
+};
+
+type DashboardData = {
+  courses: Course[];
+  nextMeeting: Meeting | null;
+};
 
 const communityActivity = [
   { user: "Sarah M.", action: "asked a question in", channel: "Foundation Course Q&A", ago: "2 hours ago" },
   { user: "Omar K.", action: "shared a resource in", channel: "General Discussion", ago: "5 hours ago" },
 ];
 
+const FALLBACK_MODULE_TITLE = "Module 2: Core Beliefs";
+const NEXT_LESSON_ID = "2-1";
+
+function formatMeetingDate(iso: string) {
+  const d = new Date(iso);
+  return {
+    day: d.toLocaleDateString("en-AU", { day: "numeric" }),
+    month: d.toLocaleDateString("en-AU", { month: "short" }).toUpperCase(),
+    weekday: d.toLocaleDateString("en-AU", { weekday: "long" }),
+    time: d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" }),
+  };
+}
+
+function ProgressRing({ progress }: { progress: number }) {
+  return (
+    <div className="relative w-16 h-16 shrink-0">
+      <svg className="w-full h-full" viewBox="0 0 100 100">
+        <circle className="stroke-gray-200" strokeWidth="8" cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" />
+        <circle
+          strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40" fill="transparent"
+          stroke="#E81C74"
+          strokeDasharray="251.2"
+          strokeDashoffset={251.2 - (251.2 * progress) / 100}
+          style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%", transition: "stroke-dashoffset 0.35s" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-sm font-bold text-gray-800">{progress}%</span>
+      </div>
+    </div>
+  );
+}
+
+function CourseCardSkeleton() {
+  return (
+    <div className="w-full max-w-md lg:max-w-[450px] glass-card rounded-2xl p-5 md:p-8 text-gray-800 animate-pulse">
+      <div className="flex justify-between items-start mb-6">
+        <div className="space-y-2 flex-1">
+          <div className="h-3 bg-gray-200 rounded w-24" />
+          <div className="h-5 bg-gray-200 rounded w-40" />
+          <div className="h-3 bg-gray-200 rounded w-32" />
+        </div>
+        <div className="w-16 h-16 bg-gray-200 rounded-full" />
+      </div>
+      <div className="h-11 bg-gray-200 rounded-full mt-6" />
+    </div>
+  );
+}
+
+function MeetingCardSkeleton() {
+  return (
+    <div className="flex flex-col md:flex-row items-center gap-6 bg-blue-50/50 rounded-xl p-6 border border-blue-100 animate-pulse">
+      <div className="bg-white p-4 rounded-xl shadow-sm text-center min-w-[100px] border border-gray-100 space-y-2">
+        <div className="h-3 bg-gray-200 rounded w-8 mx-auto" />
+        <div className="h-8 bg-gray-200 rounded w-10 mx-auto" />
+        <div className="h-3 bg-gray-200 rounded w-12 mx-auto" />
+      </div>
+      <div className="flex-1 space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-24" />
+        <div className="h-6 bg-gray-200 rounded w-3/4" />
+        <div className="h-4 bg-gray-200 rounded w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((r) => r.json())
+      .then((d: DashboardData) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const currentCourse = data?.courses?.[0];
+  const nextMeeting = data?.nextMeeting;
+  const meetingDate = nextMeeting ? formatMeetingDate(nextMeeting.start_time) : null;
+
+  // Static modules list (uses real course id from API when available)
+  const courseIdStr = currentCourse ? String(currentCourse.id) : "2";
+  const modules = [
+    { id: "1", title: "Module 1: Introduction", status: "completed", note: "Completed" },
+    { id: "2", title: "Module 2: Core Beliefs", status: "active", note: `In Progress • ${currentCourse?.progress ?? 75}%` },
+    { id: "3", title: "Module 3: Daily Practices", status: "locked", note: "Complete Module 2 to unlock" },
+  ];
+
   return (
     <main>
       {/* Hero */}
@@ -35,7 +135,7 @@ export default function DashboardPage() {
           <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
             <div className="w-full lg:w-1/2 text-center lg:text-left">
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
-                Welcome back, Ahmed!
+                Welcome back!
               </h1>
               <p className="text-base md:text-lg text-blue-100 mb-8 max-w-xl mx-auto lg:mx-0">
                 You&apos;re making great progress on your journey. Ready to continue learning?
@@ -43,50 +143,47 @@ export default function DashboardPage() {
             </div>
 
             {/* Course progress card */}
-            <div className="w-full max-w-md lg:max-w-[450px] glass-card rounded-2xl p-5 md:p-8 text-gray-800">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <span className="text-xs font-semibold text-[#E81C74] uppercase tracking-wider mb-1 block">
-                    Current Course
-                  </span>
-                  <h3 className="text-xl font-bold text-gray-900">{currentCourse.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{currentCourse.module}</p>
+            {loading ? (
+              <CourseCardSkeleton />
+            ) : currentCourse ? (
+              <div className="w-full max-w-md lg:max-w-[450px] glass-card rounded-2xl p-5 md:p-8 text-gray-800">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <span className="text-xs font-semibold text-[#E81C74] uppercase tracking-wider mb-1 block">
+                      Current Course
+                    </span>
+                    <h3 className="text-xl font-bold text-gray-900">{currentCourse.fullname}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{FALLBACK_MODULE_TITLE}</p>
+                  </div>
+                  <ProgressRing progress={currentCourse.progress} />
                 </div>
-                <div className="relative w-16 h-16 shrink-0">
-                  <svg className="w-full h-full" viewBox="0 0 100 100">
-                    <circle className="stroke-gray-200" strokeWidth="8" cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" />
-                    <circle
-                      strokeWidth="8" strokeLinecap="round" cx="50" cy="50" r="40" fill="transparent"
-                      stroke="#E81C74"
-                      strokeDasharray="251.2"
-                      strokeDashoffset={251.2 - (251.2 * currentCourse.progress) / 100}
-                      style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%", transition: "stroke-dashoffset 0.35s" }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-sm font-bold text-gray-800">{currentCourse.progress}%</span>
+
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span className="text-[#1E40AF]">▶</span>
+                    <span>Next: <strong className="text-gray-900">Understanding Tawheed</strong></span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span className="text-[#1E40AF]">🕐</span>
+                    <span>Est. time: 15 mins</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <span className="text-[#1E40AF]">▶</span>
-                  <span>Next: <strong className="text-gray-900">{currentCourse.nextLesson}</strong></span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <span className="text-[#1E40AF]">🕐</span>
-                  <span>Est. time: {currentCourse.estTime}</span>
-                </div>
+                <Link
+                  href={`/courses/${currentCourse.id}/lesson/${NEXT_LESSON_ID}`}
+                  className="w-full bg-[#E81C74] hover:bg-pink-600 text-white font-medium py-4 px-4 rounded-full transition-colors flex justify-center items-center gap-2 shadow-lg"
+                >
+                  Continue Lesson →
+                </Link>
               </div>
-
-              <Link
-                href={`/courses/${currentCourse.id}/lesson/${currentCourse.nextLessonId}`}
-                className="w-full bg-[#E81C74] hover:bg-pink-600 text-white font-medium py-4 px-4 rounded-full transition-colors flex justify-center items-center gap-2 shadow-lg"
-              >
-                Continue Lesson →
-              </Link>
-            </div>
+            ) : (
+              <div className="w-full max-w-md lg:max-w-[450px] glass-card rounded-2xl p-5 md:p-8 text-gray-800">
+                <p className="text-gray-600 text-center">No courses enrolled yet.</p>
+                <Link href="/courses" className="mt-4 w-full bg-[#E81C74] text-white font-medium py-4 rounded-full flex justify-center">
+                  Browse Courses
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -107,34 +204,47 @@ export default function DashboardPage() {
                 </Link>
               </div>
 
-              <div className="flex flex-col md:flex-row items-center gap-6 bg-blue-50/50 rounded-xl p-6 border border-blue-100">
-                <div className="bg-white p-4 rounded-xl shadow-sm text-center min-w-[100px] border border-gray-100">
-                  <span className="block text-sm font-semibold text-[#E81C74] uppercase">Oct</span>
-                  <span className="block text-3xl font-bold text-gray-900">24</span>
-                  <span className="block text-xs text-gray-500 mt-1">Thursday</span>
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-[#1E40AF] text-xs font-semibold mb-2">
-                    📹 Live Zoom
-                  </span>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Weekly Q&amp;A with Sheikh Ahmed</h3>
-                  <p className="text-gray-600 text-sm mb-4">
-                    Join us for an interactive session where we discuss this week&apos;s topics and answer your questions live.
-                  </p>
-                  <div className="flex items-center justify-center md:justify-start gap-4 text-sm text-gray-500 font-medium">
-                    <span>🕐 7:00 PM AEST</span>
-                    <span>👥 45 Enrolled</span>
+              {loading ? (
+                <MeetingCardSkeleton />
+              ) : nextMeeting && meetingDate ? (
+                <div className="flex flex-col md:flex-row items-center gap-6 bg-blue-50/50 rounded-xl p-6 border border-blue-100">
+                  <div className="bg-white p-4 rounded-xl shadow-sm text-center min-w-[100px] border border-gray-100">
+                    <span className="block text-sm font-semibold text-[#E81C74] uppercase">{meetingDate.month}</span>
+                    <span className="block text-3xl font-bold text-gray-900">{meetingDate.day}</span>
+                    <span className="block text-xs text-gray-500 mt-1">{meetingDate.weekday}</span>
+                  </div>
+                  <div className="flex-1 text-center md:text-left">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-[#1E40AF] text-xs font-semibold">
+                        📹 Live Zoom
+                      </span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
+                        {nextMeeting.cohort}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{nextMeeting.topic}</h3>
+                    <div className="flex items-center justify-center md:justify-start gap-4 text-sm text-gray-500 font-medium">
+                      <span>🕐 {meetingDate.time}</span>
+                      <span>👥 {nextMeeting.participants} Enrolled</span>
+                      <span>⏱ {nextMeeting.duration} min</span>
+                    </div>
+                  </div>
+                  <div className="w-full md:w-auto">
+                    <a
+                      href={nextMeeting.join_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full md:w-auto text-center bg-[#1E40AF] hover:bg-blue-800 text-white font-medium py-3 px-8 rounded-full transition-colors shadow-lg"
+                    >
+                      Join Session
+                    </a>
                   </div>
                 </div>
-                <div className="w-full md:w-auto">
-                  <Link
-                    href="/schedule"
-                    className="block w-full md:w-auto text-center bg-[#1E40AF] hover:bg-blue-800 text-white font-medium py-3 px-8 rounded-full transition-colors shadow-lg"
-                  >
-                    Join Session
-                  </Link>
+              ) : (
+                <div className="bg-blue-50/50 rounded-xl p-6 border border-blue-100 text-center text-gray-500">
+                  No upcoming sessions scheduled. <Link href="/schedule" className="text-[#1E40AF] hover:underline">Check back soon.</Link>
                 </div>
-              </div>
+              )}
             </section>
 
             {/* Modules */}
@@ -172,7 +282,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     {mod.status !== "locked" && (
-                      <Link href={`/courses/${currentCourse.id}`} className="text-gray-400 hover:text-[#E81C74] p-2 text-lg">
+                      <Link href={`/courses/${courseIdStr}`} className="text-gray-400 hover:text-[#E81C74] p-2 text-lg">
                         →
                       </Link>
                     )}
