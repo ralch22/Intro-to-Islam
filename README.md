@@ -2,7 +2,7 @@
 
 > A free, installable Progressive Web App unifying self-paced video courses, live Zoom classes, and private instructor consultations for IntroToIslam.org students.
 
-**Live:** [intro-to-islam-pwa.vercel.app](https://intro-to-islam-pwa.vercel.app) &nbsp;·&nbsp; **Repo:** [github.com/ralch22/Intro-to-Islam](https://github.com/ralch22/Intro-to-Islam)
+**Live:** [learn.introtoislam.org](https://learn.introtoislam.org) &nbsp;·&nbsp; **Vercel Preview:** [intro-to-islam-pwa.vercel.app](https://intro-to-islam-pwa.vercel.app) &nbsp;·&nbsp; **Repo:** [github.com/ralch22/Intro-to-Islam](https://github.com/ralch22/Intro-to-Islam)
 
 ---
 
@@ -177,7 +177,8 @@ intro-to-islam-pwa/
 │   ├── SRS.md                           # Software Requirements Specification
 │   ├── ARCHITECTURE.md                  # Solution Architecture
 │   ├── RTM.md                           # Requirements Traceability Matrix
-│   └── SPRINT-SCOPE.md                  # Sprint scope + acceptance criteria
+│   ├── SPRINT-SCOPE.md                  # Sprint scope + acceptance criteria
+│   └── DEPLOYMENT.md                    # Full deployment & go-live runbook (Phases 0–10)
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx                   # Root layout — Navbar, Footer, OfflineBanner
@@ -367,17 +368,27 @@ See `.env.example` for all required variables (WordPress OAuth, Moodle token, Zo
 
 ## Deploy
 
-**Vercel (Next.js PWA):**
+> Full step-by-step instructions: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
+
+The platform deploys across two environments:
+
+**Vercel (Next.js PWA — `learn.introtoislam.org`):**
 ```bash
 vercel --prod
 ```
 
-**Hetzner VPS (Moodle + WordPress + Cal.com + Mautic + Nginx):**
+**Hetzner CX32 VPS (11 Docker services — WordPress, Moodle, Cal.com, Mautic, Nginx, MySQL, PostgreSQL, Redis, Prometheus, Grafana, Backblaze backup):**
 ```bash
-docker compose up -d
+# Start in order — databases first, then core services, then Nginx
+cd infra
+docker compose up -d mysql postgres
+sleep 30
+docker compose up -d redis wordpress moodle calcom mautic
+sleep 60
+docker compose up -d nginx prometheus grafana
 ```
 
-Docker Compose config, Nginx reverse proxy rules, Prometheus monitoring, and deploy automation scripts are in `infra/`. See `infra/scripts/` for first-time provisioning steps.
+Docker Compose config, Nginx reverse proxy rules, Prometheus monitoring config, and deploy automation scripts are in `infra/`. See `docs/DEPLOYMENT.md` for the complete go-live runbook including DNS setup, all 23 environment variables, third-party service wiring, and the go-live verification checklist.
 
 ---
 
