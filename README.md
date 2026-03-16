@@ -2,7 +2,7 @@
 
 > A free, installable Progressive Web App unifying self-paced video courses, live Zoom classes, and private instructor consultations for IntroToIslam.org students.
 
-**Live:** [learn.introtoislam.org](https://learn.introtoislam.org) &nbsp;·&nbsp; **Vercel Preview:** [intro-to-islam-pwa.vercel.app](https://intro-to-islam-pwa.vercel.app) &nbsp;·&nbsp; **Repo:** [github.com/ralch22/Intro-to-Islam](https://github.com/ralch22/Intro-to-Islam)
+**Live:** [intro-to-islam-pwa.vercel.app](https://intro-to-islam-pwa.vercel.app &nbsp;·&nbsp; **Vercel Preview:** [intro-to-islam-pwa.vercel.app](https://intro-to-islam-pwa.vercel.app) &nbsp;·&nbsp; **Repo:** [github.com/ralch22/Intro-to-Islam](https://github.com/ralch22/Intro-to-Islam)
 
 ---
 
